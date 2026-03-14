@@ -83,6 +83,11 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("GET /install.sh", s.serveInstallScript)
 	mux.HandleFunc("GET /skill.md", s.serveSkillMD)
 	mux.HandleFunc("GET /llms.txt", s.serveSkillMD)
+	mux.HandleFunc("GET /robots.txt", s.serveRobots)
+	mux.HandleFunc("GET /sitemap.xml", s.serveSitemap)
+	mux.HandleFunc("GET /docs", s.serveDocs)
+	mux.HandleFunc("GET /blog/", s.serveBlog)
+	mux.HandleFunc("GET /vs/", s.serveVs)
 
 	// Binary releases
 	mux.HandleFunc("GET /releases/", s.serveRelease)

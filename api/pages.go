@@ -129,12 +129,44 @@ Shows mount, share, revoke, restore events.
 
 ## How it works
 
-1. pidrive mount runs sshfs under the hood
-2. sshfs connects to the pidrive SFTP server (port 2022) using your API key
-3. The server maps your session to your directory on a JuiceFS filesystem
-4. JuiceFS stores file data in AWS S3 and metadata in Redis
+1. pidrive mount connects your machine to the pidrive server via SFTP
+2. Your API key authenticates the connection
+3. The server maps your session to your private directory
+4. All file data is stored in AWS S3
 5. Each agent is isolated — you can only see your own files
 6. Sharing copies files between agent directories on the server
+
+## Frequently asked questions
+
+Q: What is pidrive?
+A: pidrive is private file storage for AI agents. It gives agents a mounted filesystem backed by S3. Agents use standard unix commands (ls, cat, grep, cp) to read and write files. No SDKs or API calls needed.
+
+Q: How is pidrive different from S3?
+A: S3 is an API — you need SDKs, presigned URLs, and credentials management. pidrive is a filesystem. You just write to /drive/file.txt and it is stored in S3 automatically.
+
+Q: How is pidrive different from Google Drive?
+A: Google Drive requires OAuth2, browser-based auth, and REST API calls. pidrive uses a simple API key and unix commands. It is built for AI agents, not humans.
+
+Q: Can agents see each other's files?
+A: No. Each agent has isolated private storage. Sharing is explicit — you choose what to share and with whom.
+
+Q: Where are files stored?
+A: All files are stored in AWS S3. Nothing is stored on the agent's machine. The mount point is a tunnel to the server.
+
+Q: What happens if my agent's VM dies?
+A: Nothing is lost. All data is in S3. Mount again from a new VM and all files are there.
+
+Q: What file operations are supported?
+A: All standard unix operations: ls, cat, echo, cp, mv, rm, mkdir, grep, head, tail, wc, find, pipes, and redirects.
+
+Q: How do I share a file?
+A: Run pidrive share file.txt --link to get a public URL, or pidrive share file.txt --to other@company.com to share directly with another agent.
+
+Q: Is there a free tier?
+A: Yes. The free plan includes 1 GB storage and 100 MB bandwidth per month.
+
+Q: What languages/frameworks does pidrive work with?
+A: Any. pidrive is a filesystem, not a library. If your agent can run unix commands, it can use pidrive. Works with Python, Node.js, Go, Rust, bash scripts, LangChain, CrewAI, AutoGPT, or any other framework.
 `
 
 var installScriptTemplate = `#!/bin/bash
@@ -191,7 +223,34 @@ var landingHTMLTemplate = `<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>pidrive</title>
+<title>pidrive — file storage for AI agents | S3 filesystem for LLM agents</title>
+<meta name="description" content="Private file storage for AI agents. Mount S3 as a filesystem. Use ls, cat, grep, cp — standard unix commands on cloud storage. Share files between agents with a URL. Free tier available.">
+<meta name="keywords" content="file storage AI agents, S3 filesystem, persistent storage LLM agents, AI agent file system, cloud storage AI agents, agent infrastructure, pidrive, mount S3, share files between agents">
+<link rel="canonical" href="{{SERVER_URL}}/">
+<meta property="og:title" content="pidrive — file storage for AI agents">
+<meta property="og:description" content="Mount S3 as a filesystem. Use ls, cat, grep — standard unix on cloud storage. Built for AI agents.">
+<meta property="og:url" content="{{SERVER_URL}}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="pidrive">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="pidrive — file storage for AI agents">
+<meta name="twitter:description" content="Mount S3 as a filesystem. Use ls, cat, grep — standard unix on cloud storage. Built for AI agents.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "pidrive",
+  "description": "Private file storage for AI agents. Mount S3 as a filesystem and use standard unix commands. Share files between agents with URLs.",
+  "url": "{{SERVER_URL}}",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS",
+  "offers": [
+    {"@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free — 1 GB storage"},
+    {"@type": "Offer", "price": "5", "priceCurrency": "USD", "description": "Pro — 100 GB storage"},
+    {"@type": "Offer", "price": "20", "priceCurrency": "USD", "description": "Team — 1 TB storage"}
+  ]
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0a;color:#e0e0e0;font-family:"SF Mono","Fira Code",Menlo,monospace;font-size:15px;line-height:1.7;padding:60px 24px;max-width:680px;margin:0 auto}
@@ -258,6 +317,9 @@ Your agents need files. S3 is an API.<br>
 </div>
 
 <div class="lk">
+<a href="{{SERVER_URL}}/docs">docs</a> &middot;
+<a href="{{SERVER_URL}}/blog/why-agents-need-files">blog</a> &middot;
+<a href="{{SERVER_URL}}/vs/google-drive">vs google drive</a> &middot;
 <a href="{{SERVER_URL}}/skill.md">skill.md</a> &middot;
 <a href="{{SERVER_URL}}/install.sh">install.sh</a> &middot;
 <a href="{{SERVER_URL}}/api/plans">API</a>
