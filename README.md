@@ -7,10 +7,10 @@ Private file storage for AI agents. Files on S3, agents use `ls`, `grep`, `cat`.
 ```
 Agent A (any VM)              Agent B (any VM)
   │                             │
-  │ ls /drive/                  │ cat /drive/report.pdf
-  │ grep -r "error" /drive/     │
+  │ ls ~/drive/                 │ cat ~/drive/report.pdf
+  │ grep -r "error" ~/drive/    │
   ▼                             ▼
-  sshfs ──── SFTP (:2022) ────► pidrive server
+  WebDAV mount ── HTTPS ──────► pidrive server
                                   │
                                   ▼
                           ┌──────────────┐
@@ -25,8 +25,8 @@ Agent A (any VM)              Agent B (any VM)
                      └─────────┘  └──────────┘
 ```
 
-Agents mount `/drive/` via SFTP. Standard unix commands just work.
-No files stored locally — everything is in S3.
+Agents mount `~/drive/` via WebDAV over HTTPS. Standard unix commands just work.
+No extra drivers needed — WebDAV is built into macOS and Linux.
 Each agent is isolated. Sharing is explicit.
 
 ## Install
@@ -58,9 +58,9 @@ pidrive verify --email agent@company.com --code 123456
 
 ```bash
 pidrive mount
-ls /drive/
-echo "hello world" > /drive/test.txt
-grep "hello" /drive/test.txt
+ls ~/drive/
+echo "hello world" > ~/drive/test.txt
+grep "hello" ~/drive/test.txt
 ```
 
 ### 3. Share
@@ -85,7 +85,7 @@ pidrive shared
 | `pidrive login` | Login to existing account |
 | `pidrive verify` | Verify with email code |
 | `pidrive whoami` | Show current agent info |
-| `pidrive mount` | Mount drive at /drive/ via SFTP |
+| `pidrive mount` | Mount drive via WebDAV |
 | `pidrive unmount` | Unmount drive |
 | `pidrive status` | Show mount + connection status |
 | `pidrive share <path> --to <email>` | Share with agent |
@@ -130,15 +130,18 @@ pidrive shared
 - `GET /api/billing` — billing info
 - `POST /api/upgrade` — upgrade plan
 
+### WebDAV (Basic Auth with API key as password)
+- `/webdav/` — full WebDAV filesystem access (PROPFIND, GET, PUT, DELETE, MKCOL, LOCK, UNLOCK)
+
 ## Architecture
 
 ### Agent side
 - `pidrive` CLI binary (~10 MB)
-- `sshfs` for FUSE mount
-- No files stored locally — `/drive/` is a mount point
+- WebDAV mount (built into macOS and Linux — no extra drivers)
+- Recently accessed files cached locally for performance
 
 ### Server side
-- `pidrive-server` — HTTP API (:8080) + SFTP server (:2022)
+- `pidrive-server` — HTTP API (:8080) + WebDAV handler
 - JuiceFS FUSE mount at `/mnt/pidrive` — stores data in S3, metadata in Redis
 - Postgres — agents, shares, search index, activity, billing
 - Redis — JuiceFS metadata (DB 1), app cache (DB 0)
@@ -146,9 +149,9 @@ pidrive shared
 
 ### Data flow
 ```
-Agent: echo "hello" > /drive/test.txt
-  → sshfs sends SFTP write
-  → pidrive SFTP server authenticates via API key
+Agent: echo "hello" > ~/drive/test.txt
+  → WebDAV PUT over HTTPS
+  → pidrive server authenticates via API key (Basic Auth)
   → writes to /mnt/pidrive/agents/{agent-id}/files/test.txt
   → JuiceFS splits into chunks, stores in S3
   → metadata updated in Redis
@@ -160,8 +163,6 @@ Agent: echo "hello" > /drive/test.txt
 # Server
 PIDRIVE_SERVER_URL=https://pidrive.ressl.ai
 PIDRIVE_PORT=8080
-PIDRIVE_SFTP_PORT=2022
-PIDRIVE_HOST_KEY_PATH=/var/lib/pidrive/host_key
 PIDRIVE_DB_URL=postgres://pidrive:pidrive@localhost:5432/pidrive?sslmode=disable
 PIDRIVE_REDIS_URL=redis://localhost:6379/0
 PIDRIVE_JUICEFS_MOUNT_PATH=/mnt/pidrive
@@ -174,8 +175,8 @@ PIDRIVE_FROM_EMAIL=noreply@agents.ressl.ai
 ## Tech stack
 
 - **CLI + Server**: Go
-- **Filesystem**: JuiceFS (FUSE) on server, sshfs on agent
-- **SFTP**: golang.org/x/crypto/ssh + github.com/pkg/sftp
+- **Filesystem**: JuiceFS (FUSE) on server, WebDAV mount on agent
+- **WebDAV**: golang.org/x/net/webdav
 - **Database**: Postgres 16 (agents, shares, search, billing)
 - **Metadata**: Redis 7 (JuiceFS metadata engine, AOF persistence)
 - **Storage**: AWS S3 (us-east-2)

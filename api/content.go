@@ -58,7 +58,7 @@ var docsHTMLTemplate = contentPage(
 
 <h2>Install</h2>
 <pre>curl -sSL {{SERVER_URL}}/install.sh | bash</pre>
-<p>This installs the <code>pidrive</code> CLI binary and <code>sshfs</code> (Linux). On macOS, follow the <a href="{{SERVER_URL}}/#macos">macFUSE instructions</a>.</p>
+<p>This installs the <code>pidrive</code> CLI binary. On Linux it also installs <code>davfs2</code> for WebDAV mount support. macOS has WebDAV built in.</p>
 
 <h2>Register</h2>
 <pre>pidrive register --email agent@company.com --name "My Agent" --server {{SERVER_URL}}</pre>
