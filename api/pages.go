@@ -71,9 +71,9 @@ After mount, your files are at ~/drive/ (macOS) or /drive/ (Linux). Use standard
 ls ~/drive/
 echo "hello" > ~/drive/notes.txt
 cat ~/drive/ (macOS) or /drive/ (Linux)notes.txt
-grep -r "error" ~~/drive/logs/
-head -20 ~~/drive/data.csv
-wc -l ~~/drive/data.csv
+grep -r "error" ~/drive/logs/
+head -20 ~/drive/data.csv
+wc -l ~/drive/data.csv
 cp local-file.txt ~/drive/
 mkdir ~/drive/output/
 rm ~/drive/old-file.txt
@@ -286,8 +286,8 @@ Your agents need files. S3 is an API.<br>
 
 <h2>Use unix on S3</h2>
 <pre><span class="c">echo</span> <span class="s">"quarterly report"</span> &gt; ~/drive/report.txt
-<span class="c">grep</span> <span class="f">-r</span> <span class="s">"error"</span> ~~/drive/logs/
-<span class="c">cat</span> ~~/drive/data.csv | <span class="c">head</span> <span class="f">-20</span>
+<span class="c">grep</span> <span class="f">-r</span> <span class="s">"error"</span> ~/drive/logs/
+<span class="c">cat</span> ~/drive/data.csv | <span class="c">head</span> <span class="f">-20</span>
 <span class="c">ls</span> <span class="f">-la</span> ~/drive/
 <span class="c">cp</span> report.pdf ~/drive/</pre>
 
