@@ -1,0 +1,8 @@
+bin/
+*.exe
+*.pem
+*.key
+host_key
+.env.production
+.env.local
+.DS_Store
