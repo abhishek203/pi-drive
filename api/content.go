@@ -380,6 +380,70 @@ pidrive mount
 pidrive share myfile.txt --to other-agent@company.com</pre>
 </div>
 `),
+
+	"how-we-built-pidrive": contentPage(
+		"How we built pidrive — file storage for AI agents",
+		"The story of building pidrive. Why AI agents need persistent files, why S3 is not enough, and the wrong turns we took getting there.",
+		"{{SERVER_URL}}/blog/how-we-built-pidrive",
+		`<h1>How we built pidrive</h1>
+<p><em>From "where do the files go?" to a working product in one day.</em></p>
+
+<h2>The problem</h2>
+
+<p>We were building AI agents that needed to save files. Reports, logs, scraped data, analysis output. Simple stuff.</p>
+
+<p>But every time a container restarted, everything was gone. The agent did the work. The output disappeared.</p>
+
+<h2>Why not just use S3?</h2>
+
+<p>We tried. But making an AI agent talk to S3 is surprisingly painful. It needs the AWS SDK, credential management, bucket policies, presigned URLs for sharing. Half the agent's code becomes storage plumbing, not actual work.</p>
+
+<p>We wanted something simpler. <code>echo "report" &gt; /drive/report.txt</code> and have it persist. Like Google Drive, but for agents. No browser, no OAuth, just a directory that saves to the cloud.</p>
+
+<h2>The wrong turns</h2>
+
+<p>Our first idea was to give every agent a direct connection to S3 through a filesystem layer. That meant giving every agent cloud credentials. One compromised agent and everything is gone. Bad idea.</p>
+
+<p>So we put a server in the middle. Agents connect to the server, the server talks to S3. Safe.</p>
+
+<p>We tried SFTP first. Worked great on Linux. Then we tried macOS. It needed a kernel extension, a trip to System Settings, and a <strong>reboot</strong>. Asking users to reboot their Mac to try a file storage tool is a non-starter.</p>
+
+<p>We looked at NFS — authentication is IP-based, does not work for agents scattered across the internet. SMB — too heavy. Then someone said WebDAV.</p>
+
+<h2>WebDAV was the answer</h2>
+
+<p>WebDAV is built into macOS. Built into Linux. Runs over HTTPS — no extra ports, no extra drivers, no reboot. It took us about twenty minutes to add it to the server.</p>
+
+<p>It was not perfectly smooth. macOS has some quirks with how it writes files and handles credentials. We hit a few bugs that took time to track down. But once we sorted those out, everything worked.</p>
+
+<p><code>ls /drive/</code>. <code>cat /drive/report.txt</code>. <code>grep -r "error" /drive/logs/</code>. Standard unix commands, on files stored in S3, from any machine.</p>
+
+<h2>What pidrive does today</h2>
+
+<p>You install a CLI. Register with your email. Run <code>pidrive mount</code>. You get a directory. Everything you put in that directory is stored in S3, encrypted in transit, private by default.</p>
+
+<p>Each agent is completely isolated. You cannot see another agent's files. Sharing is explicit — <code>pidrive share file.txt --link</code> gives you a URL. <code>pidrive share file.txt --to other@company.com</code> sends it directly.</p>
+
+<p>There is full-text search across your files. An activity log. Trash with 30-day recovery. Usage tracking and plans.</p>
+
+<p>On the agent's machine, there is one small binary and a mounted directory. No cloud credentials, no SDKs, no configuration files. The agent does not even know it is talking to S3. It is just writing to a folder.</p>
+
+<h2>What we learned</h2>
+
+<p><strong>Simple beats clever.</strong> We tried three different approaches before landing on the one that just works everywhere. The winning solution was the least technically impressive — it is just HTTP under the hood. But it works on every operating system without installing anything extra.</p>
+
+<p><strong>The connection matters more than the storage.</strong> S3 was never the problem. Getting files from the agent's machine to the server was the entire challenge. Once we solved that, everything else fell into place.</p>
+
+<p><strong>Agents want files, not APIs.</strong> Every SDK and REST API adds complexity. A filesystem adds zero. If your agent can run <code>cat</code>, it can use pidrive.</p>
+
+<div class="cta">
+<p><strong>Try it:</strong></p>
+<pre>curl -sSL {{SERVER_URL}}/install.sh | bash
+pidrive register --email you@company.com --name "My Agent" --server {{SERVER_URL}}
+pidrive mount
+echo "it works" &gt; /drive/test.txt</pre>
+</div>
+`),
 }
 
 // --- VS pages ---

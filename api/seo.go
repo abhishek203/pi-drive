@@ -76,5 +76,6 @@ var sitemapTemplate = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>{{SERVER_URL}}/blog/s3-is-not-a-filesystem</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>{{SERVER_URL}}/blog/sharing-files-between-agents</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>{{SERVER_URL}}/vs/google-drive</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>{{SERVER_URL}}/blog/how-we-built-pidrive</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>{{SERVER_URL}}/skill.md</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
 </urlset>`
