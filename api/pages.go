@@ -210,8 +210,8 @@ pre{background:#141414;border:1px solid #222;border-radius:8px;padding:20px 24px
 .lk{margin-top:48px;padding-top:24px;border-top:1px solid #1a1a1a;color:#555;font-size:13px}
 .lk a{color:#6cb6ff;text-decoration:none}
 .lk a:hover{text-decoration:underline}
-.nt{margin-top:24px;color:#555;font-size:11px;line-height:1.6}
-.nt code{color:#666;font-size:11px}
+.nt{margin-top:24px;color:#999;font-size:12px;line-height:1.6}
+.nt code{color:#bbb;background:#1a1a1a;padding:2px 5px;border-radius:3px;font-size:12px}
 </style>
 </head>
 <body>
