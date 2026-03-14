@@ -47,18 +47,18 @@ func (s *Server) serveInstallScript(w http.ResponseWriter, r *http.Request) {
 
 var skillMDTemplate = `---
 name: pidrive
-description: Private file storage for AI agents. Store, read, write, search, and share files backed by S3. Mount via SFTP and use standard unix commands (ls, cat, grep, cp, rm). No local storage — files live in S3.
+description: Private file storage for AI agents. Store, read, write, search, and share files backed by S3. Mount via WebDAV and use standard unix commands (ls, cat, grep, cp, rm). No local storage — files live in S3.
 ---
 
 # pidrive
 
-Private file storage for AI agents. Files are stored in AWS S3 and accessed via SFTP mount. No files are stored locally — the mount point is a tunnel to the server.
+Private file storage for AI agents. Files are stored in AWS S3 and accessed via WebDAV mount. No files are stored locally — the mount point is a tunnel to the server.
 
 ## Install
 
 curl -sSL {{SERVER_URL}}/install.sh | bash
 
-This installs the pidrive CLI and sshfs (needed for mounting).
+This installs the pidrive CLI. On Linux it also installs davfs2. macOS has WebDAV built in.
 
 ## Get started
 
@@ -78,7 +78,7 @@ cp local-file.txt /drive/
 mkdir /drive/output/
 rm /drive/old-file.txt
 
-Every read/write goes through SFTP to the server, then to S3. Nothing is cached locally. If the VM dies, nothing is lost.
+Every read/write goes through WebDAV over HTTPS to the server, then to S3. Nothing is cached locally. If the VM dies, nothing is lost.
 
 ## Share
 
@@ -129,7 +129,7 @@ Shows mount, share, revoke, restore events.
 
 ## How it works
 
-1. pidrive mount connects your machine to the pidrive server via SFTP
+1. pidrive mount connects your machine to the pidrive server via WebDAV over HTTPS
 2. Your API key authenticates the connection
 3. The server maps your session to your private directory
 4. All file data is stored in AWS S3
@@ -184,22 +184,15 @@ PIDRIVE_SERVER="{{SERVER_URL}}"
 
 echo "Installing pidrive for $OS/$ARCH..."
 
-# Install sshfs (needed for mounting)
-if ! command -v sshfs &>/dev/null; then
-  echo "Installing sshfs..."
-  if [ "$OS" = "linux" ]; then
+# Install WebDAV mount support (Linux only — macOS has it built in)
+if [ "$OS" = "linux" ]; then
+  if ! command -v mount.davfs &>/dev/null; then
+    echo "Installing davfs2..."
     if command -v apt &>/dev/null; then
-      sudo apt update && sudo apt install -y sshfs
+      sudo apt update && sudo apt install -y davfs2
     elif command -v yum &>/dev/null; then
-      sudo yum install -y fuse-sshfs
+      sudo yum install -y davfs2
     fi
-  elif [ "$OS" = "darwin" ]; then
-    if ! test -d /Library/Filesystems/macfuse.fs; then
-      echo "macFUSE required. Install from: https://osxfuse.github.io/"
-      exit 1
-    fi
-    brew tap gromgit/fuse 2>/dev/null
-    brew install gromgit/fuse/sshfs-mac 2>/dev/null || echo "Install sshfs: brew install gromgit/fuse/sshfs-mac"
   fi
 fi
 
@@ -325,7 +318,7 @@ Your agents need files. S3 is an API.<br>
 <a href="{{SERVER_URL}}/api/plans">API</a>
 </div>
 
-<p class="nt">macOS note: sshfs requires macFUSE. Run <code>brew install --cask macfuse</code>, approve the kernel extension in System Settings &rarr; Privacy &amp; Security &rarr; Enable System Extensions, reboot, then <code>brew install gromgit/fuse/sshfs-mac</code>. One-time setup. Ubuntu works out of the box.</p>
+<p class="nt">Mounts via WebDAV over HTTPS. macOS and Linux — no extra drivers needed.</p>
 
 </body>
 </html>`

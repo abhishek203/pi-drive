@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -21,43 +20,13 @@ var mountCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Check sshfs is installed
-		if _, err := exec.LookPath("sshfs"); err != nil {
-			fmt.Fprintln(os.Stderr, "✗ sshfs is not installed")
-			fmt.Fprintln(os.Stderr, "")
-			if runtime.GOOS == "linux" {
-				fmt.Fprintln(os.Stderr, "  Install:")
-				fmt.Fprintln(os.Stderr, "    sudo apt install sshfs")
-			} else if runtime.GOOS == "darwin" {
-				fmt.Fprintln(os.Stderr, "  macOS requires macFUSE + sshfs (one-time setup):")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Step 1: Install macFUSE")
-				fmt.Fprintln(os.Stderr, "    brew install --cask macfuse")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Step 2: Allow the kernel extension")
-				fmt.Fprintln(os.Stderr, "    System Settings → Privacy & Security → scroll down → Allow")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Step 3: Reboot your Mac")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Step 4: Install sshfs")
-				fmt.Fprintln(os.Stderr, "    brew install gromgit/fuse/sshfs-mac")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Then run 'pidrive mount' again.")
-			} else {
-				fmt.Fprintln(os.Stderr, "  Install sshfs for your platform and try again.")
-			}
-			os.Exit(1)
-		}
-
 		// Call mount API to ensure agent dirs exist
 		fmt.Println("Connecting to server...")
-		result, err := client.Post("/api/mount", nil)
+		_, err = client.Post("/api/mount", nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
 			os.Exit(1)
 		}
-
-		agentID, _ := result["agent_id"].(string)
 
 		drivePath := client.MountPath()
 		os.MkdirAll(drivePath, 0755)
@@ -68,44 +37,86 @@ var mountCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
-		// Parse server URL to get host
-		serverURL := client.Server()
-		u, err := url.Parse(serverURL)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Invalid server URL: %v\n", err)
-			os.Exit(1)
-		}
-		host := u.Hostname()
-
-		// SFTP port
-		sftpPort := "2022"
+		// WebDAV URL
+		webdavURL := strings.Replace(client.Server(), "https://", "https://pidrive:"+client.creds.APIKey+"@", 1)
+		webdavURL = strings.Replace(webdavURL, "http://", "http://pidrive:"+client.creds.APIKey+"@", 1)
+		webdavURL += "/webdav"
 
 		fmt.Printf("Mounting at %s...\n", drivePath)
 
-		// Mount via sshfs
-		// Username is agent ID, password is API key
-		sshfsArgs := []string{
-			fmt.Sprintf("%s@%s:/", agentID, host),
-			drivePath,
-			"-p", sftpPort,
-			"-o", "password_stdin",
-			"-o", "StrictHostKeyChecking=no",
-			"-o", "UserKnownHostsFile=/dev/null",
-			"-o", "reconnect",
-			"-o", "ServerAliveInterval=15",
-			"-o", "ServerAliveCountMax=3",
-		}
-
 		if runtime.GOOS == "darwin" {
-			sshfsArgs = append(sshfsArgs, "-o", "volname=pidrive")
-		}
+			// macOS: use expect to automate mount_webdav -i
+			if _, err := exec.LookPath("expect"); err != nil {
+				fmt.Fprintln(os.Stderr, "✗ 'expect' is not installed")
+				fmt.Fprintln(os.Stderr, "  Install: brew install expect")
+				os.Exit(1)
+			}
 
-		sshfsCmd := exec.Command("sshfs", sshfsArgs...)
-		sshfsCmd.Stdin = strings.NewReader(client.creds.APIKey)
-		sshfsCmd.Stderr = os.Stderr
+			serverWebDAV := client.Server() + "/webdav/"
+			expectScript := fmt.Sprintf(`spawn mount_webdav -i %s %s
+expect "Username:"
+send "pidrive\r"
+expect "Password:"
+send "%s\r"
+expect eof
+`, serverWebDAV, drivePath, client.creds.APIKey)
 
-		if err := sshfsCmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Mount failed: %v\n", err)
+			mountCmd := exec.Command("expect", "-c", expectScript)
+			mountCmd.Stderr = os.Stderr
+			mountCmd.Stdout = os.Stdout
+
+			if err := mountCmd.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "✗ Mount failed: %v\n", err)
+				os.Exit(1)
+			}
+		} else if runtime.GOOS == "linux" {
+			// Linux: check for davfs2
+			if _, err := exec.LookPath("mount.davfs"); err != nil {
+				fmt.Fprintln(os.Stderr, "✗ davfs2 is not installed")
+				fmt.Fprintln(os.Stderr, "")
+				fmt.Fprintln(os.Stderr, "  Install:")
+				fmt.Fprintln(os.Stderr, "    sudo apt install davfs2")
+				fmt.Fprintln(os.Stderr, "")
+				fmt.Fprintln(os.Stderr, "  Then run 'pidrive mount' again.")
+				os.Exit(1)
+			}
+
+			// Write credentials to davfs2 secrets file
+			home, _ := os.UserHomeDir()
+			davfsDir := home + "/.davfs2"
+			os.MkdirAll(davfsDir, 0700)
+			secretsFile := davfsDir + "/secrets"
+			serverWebDAV := client.Server() + "/webdav"
+
+			// Read existing secrets, replace or append
+			existing, _ := os.ReadFile(secretsFile)
+			lines := strings.Split(string(existing), "\n")
+			var newLines []string
+			found := false
+			for _, line := range lines {
+				if strings.HasPrefix(line, serverWebDAV) {
+					newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
+					found = true
+				} else {
+					newLines = append(newLines, line)
+				}
+			}
+			if !found {
+				newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
+			}
+			os.WriteFile(secretsFile, []byte(strings.Join(newLines, "\n")), 0600)
+
+			mountExec := exec.Command("sudo", "mount", "-t", "davfs", serverWebDAV, drivePath)
+			mountExec.Stderr = os.Stderr
+			mountExec.Stdout = os.Stdout
+			mountExec.Stdin = os.Stdin
+
+			if err := mountExec.Run(); err != nil {
+				fmt.Fprintf(os.Stderr, "✗ Mount failed: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, "✗ Unsupported OS")
 			os.Exit(1)
 		}
 
@@ -134,7 +145,7 @@ var unmountCmd = &cobra.Command{
 
 		var unmountErr error
 		if runtime.GOOS == "linux" {
-			unmountErr = exec.Command("fusermount", "-u", drivePath).Run()
+			unmountErr = exec.Command("sudo", "umount", drivePath).Run()
 		} else {
 			unmountErr = exec.Command("umount", drivePath).Run()
 		}
@@ -192,8 +203,4 @@ func isMounted(path string) bool {
 		return false
 	}
 	return strings.Contains(string(out), path)
-}
-
-func init() {
-	mountCmd.Flags().String("path", "/drive", "Mount path")
 }

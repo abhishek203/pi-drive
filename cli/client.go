@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"runtime"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -80,6 +82,10 @@ func (c *Client) Server() string {
 func (c *Client) MountPath() string {
 	if c.creds.Mount != "" {
 		return c.creds.Mount
+	}
+	if runtime.GOOS == "darwin" {
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, "drive")
 	}
 	return "/drive"
 }

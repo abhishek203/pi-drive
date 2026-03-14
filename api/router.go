@@ -89,6 +89,10 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("GET /blog/", s.serveBlog)
 	mux.HandleFunc("GET /vs/", s.serveVs)
 
+	// WebDAV (all methods)
+	mux.HandleFunc("/webdav/", s.serveWebDAV)
+	mux.HandleFunc("/webdav", s.serveWebDAV)
+
 	// Binary releases
 	mux.HandleFunc("GET /releases/", s.serveRelease)
 
