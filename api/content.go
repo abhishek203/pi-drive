@@ -68,19 +68,19 @@ var docsHTMLTemplate = contentPage(
 
 <h2>Mount your drive</h2>
 <pre>pidrive mount</pre>
-<p>This mounts your private storage at <code>~/drive/</code> (macOS) or <code>/drive/</code> (Linux). Every file you create there is stored in S3. Nothing is saved locally.</p>
+<p>This mounts your private storage at <code>/drive/</code> (macOS) or <code>/drive/</code> (Linux). Every file you create there is stored in S3. Nothing is saved locally.</p>
 
 <h2>Read and write files</h2>
 <p>Use any unix command. They all work:</p>
-<pre>ls ~/drive/
-echo "hello world" &gt; /drive/gt; ~/drive/notes.txt
-cat ~/drive/notes.txt
-cp report.pdf ~/drive/
-mkdir ~/drive/output/
-grep -r "error" ~/drive/logs/
-head -20 ~/drive/data.csv
-wc -l ~/drive/data.csv
-rm ~/drive/old-file.txt</pre>
+<pre>ls /drive/
+echo "hello world" &gt; /drive/gt; /drive/notes.txt
+cat /drive/notes.txt
+cp report.pdf /drive/
+mkdir /drive/output/
+grep -r "error" /drive/logs/
+head -20 /drive/data.csv
+wc -l /drive/data.csv
+rm /drive/old-file.txt</pre>
 
 <h2>Share files</h2>
 
@@ -160,13 +160,13 @@ pidrive upgrade     Change plan</pre>
 <h2>FAQ</h2>
 
 <h3>Are files stored on my machine?</h3>
-<p>No. The mount point (<code>~/drive/</code>) is a tunnel to the server. All data lives in S3. If your VM dies, nothing is lost.</p>
+<p>No. The mount point (<code>/drive/</code>) is a tunnel to the server. All data lives in S3. If your VM dies, nothing is lost.</p>
 
 <h3>Can I use any unix tool?</h3>
 <p>Yes. <code>ls</code>, <code>cat</code>, <code>grep</code>, <code>cp</code>, <code>mv</code>, <code>rm</code>, <code>head</code>, <code>tail</code>, <code>wc</code>, <code>find</code>, pipes, redirects — everything works. The mount behaves like a normal directory.</p>
 
 <h3>How is this different from S3?</h3>
-<p>S3 is an API. You need SDKs, presigned URLs, multipart uploads. pidrive is a filesystem. You just <code>echo "data" &gt; ~/drive/file.txt</code>.</p>
+<p>S3 is an API. You need SDKs, presigned URLs, multipart uploads. pidrive is a filesystem. You just <code>echo "data" &gt; /drive/file.txt</code>.</p>
 
 <h3>Can agents see each other's files?</h3>
 <p>No. Each agent is isolated. You only see your own files. Sharing is explicit — you choose what to share and with whom.</p>
@@ -216,15 +216,15 @@ var blogPages = map[string]string{
 
 <p>Agents want what every program wants: a filesystem.</p>
 
-<pre>echo "Q4 revenue: $2.4M" &gt; /drive/gt; ~/drive/reports/q4-2024.txt
-grep -r "error" ~/drive/logs/
-ls ~/drive/output/</pre>
+<pre>echo "Q4 revenue: $2.4M" &gt; /drive/gt; /drive/reports/q4-2024.txt
+grep -r "error" /drive/logs/
+ls /drive/output/</pre>
 
 <p>Simple. No SDKs. No API calls. Just files and directories. Standard unix commands that have worked for 50 years.</p>
 
 <h2>The solution</h2>
 
-<p>pidrive gives agents a mounted filesystem backed by S3. Install the CLI, run <code>pidrive mount</code>, and <code>~/drive/</code> is your agent's private storage.</p>
+<p>pidrive gives agents a mounted filesystem backed by S3. Install the CLI, run <code>pidrive mount</code>, and <code>/drive/</code> is your agent's private storage.</p>
 
 <ul>
 <li><strong>Persistent</strong> — files survive container restarts, VM termination, even datacenter moves. Data lives in S3.</li>
@@ -239,7 +239,7 @@ ls ~/drive/output/</pre>
 <pre>curl -sSL {{SERVER_URL}}/install.sh | bash
 pidrive register --email agent@company.com --name "My Agent" --server {{SERVER_URL}}
 pidrive mount
-echo "it works" &gt; /drive/gt; ~/drive/test.txt</pre>
+echo "it works" &gt; /drive/gt; /drive/test.txt</pre>
 </div>
 `),
 
@@ -253,11 +253,11 @@ echo "it works" &gt; /drive/gt; ~/drive/test.txt</pre>
 
 <h2>What agents want to do</h2>
 
-<pre>ls ~/drive/
-cat ~/drive/report.txt
+<pre>ls /drive/
+cat /drive/report.txt
 grep -r "error" /data/logs/
-echo "result" &gt; ~/drive/output.txt
-cp ~/drive/report.txt /shared/</pre>
+echo "result" &gt; /drive/output.txt
+cp /drive/report.txt /shared/</pre>
 
 <h2>What S3 makes you do</h2>
 
@@ -292,13 +292,13 @@ aws s3 presign s3://my-bucket/data/report.txt --expires-in 3600</pre>
 
 <h2>What if S3 was a filesystem?</h2>
 
-<p>That is what pidrive does. Your agent mounts <code>~/drive/</code> and gets a real POSIX filesystem. Under the hood, data goes to S3. But your agent never knows or cares.</p>
+<p>That is what pidrive does. Your agent mounts <code>/drive/</code> and gets a real POSIX filesystem. Under the hood, data goes to S3. But your agent never knows or cares.</p>
 
 <pre># Same files, stored in S3, accessed as a filesystem
-ls ~/drive/
-cat ~/drive/report.txt
-grep -r "error" ~/drive/logs/
-echo "result" &gt; /drive/gt; ~/drive/output.txt</pre>
+ls /drive/
+cat /drive/report.txt
+grep -r "error" /drive/logs/
+echo "result" &gt; /drive/gt; /drive/output.txt</pre>
 
 <p>No SDK. No credentials in your agent code. No presigned URLs. Just files.</p>
 
@@ -307,7 +307,7 @@ echo "result" &gt; /drive/gt; ~/drive/output.txt</pre>
 <pre>curl -sSL {{SERVER_URL}}/install.sh | bash
 pidrive register --email you@company.com --name "My Agent" --server {{SERVER_URL}}
 pidrive mount
-ls ~/drive/</pre>
+ls /drive/</pre>
 </div>
 `),
 
@@ -355,17 +355,17 @@ pidrive revoke &lt;share-id&gt;</pre>
 <h2>The workflow</h2>
 
 <pre># Research agent
-echo "competitor data..." &gt; /drive/gt; ~/drive/research/competitors.csv
+echo "competitor data..." &gt; /drive/gt; /drive/research/competitors.csv
 pidrive share research/competitors.csv --to analyst@company.com
 
 # Analyst agent
-cat ~/drive/competitors.csv
+cat /drive/competitors.csv
 # ... process data ...
-echo "analysis results..." &gt; /drive/gt; ~/drive/analysis.txt
+echo "analysis results..." &gt; /drive/gt; /drive/analysis.txt
 pidrive share analysis.txt --to reporter@company.com
 
 # Reporter agent
-cat ~/drive/analysis.txt
+cat /drive/analysis.txt
 # ... write report ...
 pidrive share report.pdf --link
 &rarr; {{SERVER_URL}}/s/abc123</pre>
@@ -425,7 +425,7 @@ var vsPages = map[string]string{
 
 <pre>pidrive register --email agent@company.com --name "My Agent" --server {{SERVER_URL}}
 pidrive mount
-echo "done" &gt; /drive/gt; ~/drive/result.txt</pre>
+echo "done" &gt; /drive/gt; /drive/result.txt</pre>
 
 <p>Three commands. No OAuth. No Google Cloud console. No browser.</p>
 

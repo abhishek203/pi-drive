@@ -7,8 +7,8 @@ Private file storage for AI agents. Files on S3, agents use `ls`, `grep`, `cat`.
 ```
 Agent A (any VM)              Agent B (any VM)
   │                             │
-  │ ls ~/drive/                 │ cat ~/drive/report.pdf
-  │ grep -r "error" ~/drive/    │
+  │ ls /drive/                 │ cat /drive/report.pdf
+  │ grep -r "error" /drive/    │
   ▼                             ▼
   WebDAV mount ── HTTPS ──────► pidrive server
                                   │
@@ -25,7 +25,7 @@ Agent A (any VM)              Agent B (any VM)
                      └─────────┘  └──────────┘
 ```
 
-Agents mount `~/drive/` via WebDAV over HTTPS. Standard unix commands just work.
+Agents mount `/drive/` via WebDAV over HTTPS. Standard unix commands just work.
 No extra drivers needed — WebDAV is built into macOS and Linux.
 Each agent is isolated. Sharing is explicit.
 
@@ -58,9 +58,9 @@ pidrive verify --email agent@company.com --code 123456
 
 ```bash
 pidrive mount
-ls ~/drive/
-echo "hello world" > ~/drive/test.txt
-grep "hello" ~/drive/test.txt
+ls /drive/
+echo "hello world" > /drive/test.txt
+grep "hello" /drive/test.txt
 ```
 
 ### 3. Share
@@ -149,7 +149,7 @@ pidrive shared
 
 ### Data flow
 ```
-Agent: echo "hello" > ~/drive/test.txt
+Agent: echo "hello" > /drive/test.txt
   → WebDAV PUT over HTTPS
   → pidrive server authenticates via API key (Basic Auth)
   → writes to /mnt/pidrive/agents/{agent-id}/files/test.txt
