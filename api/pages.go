@@ -66,17 +66,17 @@ pidrive register --email you@company.com --name "My Agent" --server {{SERVER_URL
 pidrive verify --email you@company.com --code <check-email>
 pidrive mount
 
-After mount, your files are at /drive/. Use standard unix commands:
+After mount, your files are at ~/drive/ (macOS) or /drive/ (Linux). Use standard unix commands:
 
-ls /drive/
-echo "hello" > /drive/notes.txt
-cat /drive/notes.txt
-grep -r "error" /drive/logs/
-head -20 /drive/data.csv
-wc -l /drive/data.csv
-cp local-file.txt /drive/
-mkdir /drive/output/
-rm /drive/old-file.txt
+ls ~/drive/
+echo "hello" > ~/drive/notes.txt
+cat ~/drive/ (macOS) or /drive/ (Linux)notes.txt
+grep -r "error" ~~/drive/logs/
+head -20 ~~/drive/data.csv
+wc -l ~~/drive/data.csv
+cp local-file.txt ~/drive/
+mkdir ~/drive/output/
+rm ~/drive/old-file.txt
 
 Every read/write goes through WebDAV over HTTPS to the server, then to S3. Nothing is cached locally. If the VM dies, nothing is lost.
 
@@ -142,7 +142,7 @@ Q: What is pidrive?
 A: pidrive is private file storage for AI agents. It gives agents a mounted filesystem backed by S3. Agents use standard unix commands (ls, cat, grep, cp) to read and write files. No SDKs or API calls needed.
 
 Q: How is pidrive different from S3?
-A: S3 is an API — you need SDKs, presigned URLs, and credentials management. pidrive is a filesystem. You just write to /drive/file.txt and it is stored in S3 automatically.
+A: S3 is an API — you need SDKs, presigned URLs, and credentials management. pidrive is a filesystem. You just write to ~/drive/file.txt and it is stored in S3 automatically.
 
 Q: How is pidrive different from Google Drive?
 A: Google Drive requires OAuth2, browser-based auth, and REST API calls. pidrive uses a simple API key and unix commands. It is built for AI agents, not humans.
@@ -208,7 +208,7 @@ echo ""
 echo "Next steps:"
 echo "  pidrive register --email you@company.com --name \"My Agent\" --server ${PIDRIVE_SERVER}"
 echo "  pidrive mount"
-echo "  ls /drive/"
+echo "  ls ~/drive/"
 `
 
 var landingHTMLTemplate = `<!DOCTYPE html>
@@ -285,11 +285,11 @@ Your agents need files. S3 is an API.<br>
 <span class="c">pidrive</span> <span class="f">mount</span></pre>
 
 <h2>Use unix on S3</h2>
-<pre><span class="c">echo</span> <span class="s">"quarterly report"</span> &gt; /drive/report.txt
-<span class="c">grep</span> <span class="f">-r</span> <span class="s">"error"</span> /drive/logs/
-<span class="c">cat</span> /drive/data.csv | <span class="c">head</span> <span class="f">-20</span>
-<span class="c">ls</span> <span class="f">-la</span> /drive/
-<span class="c">cp</span> report.pdf /drive/</pre>
+<pre><span class="c">echo</span> <span class="s">"quarterly report"</span> &gt; ~/drive/report.txt
+<span class="c">grep</span> <span class="f">-r</span> <span class="s">"error"</span> ~~/drive/logs/
+<span class="c">cat</span> ~~/drive/data.csv | <span class="c">head</span> <span class="f">-20</span>
+<span class="c">ls</span> <span class="f">-la</span> ~/drive/
+<span class="c">cp</span> report.pdf ~/drive/</pre>
 
 <h2>Share with a URL</h2>
 <pre><span class="c">pidrive</span> <span class="f">share</span> data.csv <span class="d">--link</span>
