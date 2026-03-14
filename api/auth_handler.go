@@ -16,6 +16,11 @@ func NewAuthHandler(authService *auth.AuthService, emailService *auth.EmailServi
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if !registerLimiter.allow(getClientIP(r)) {
+		writeError(w, http.StatusTooManyRequests, "too many registration attempts, try again later")
+		return
+	}
+
 	var req struct {
 		Email string `json:"email"`
 		Name  string `json:"name"`
@@ -59,6 +64,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !loginLimiter.allow(req.Email) {
+		writeError(w, http.StatusTooManyRequests, "too many login attempts, try again later")
+		return
+	}
+
 	code, err := h.authService.Login(req.Email)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
@@ -83,6 +93,11 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Email == "" || req.Code == "" {
 		writeError(w, http.StatusBadRequest, "email and code are required")
+		return
+	}
+
+	if !verifyLimiter.allow(req.Email) {
+		writeError(w, http.StatusTooManyRequests, "too many verification attempts, try again later")
 		return
 	}
 

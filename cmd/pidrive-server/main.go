@@ -11,10 +11,8 @@ import (
 	"syscall"
 
 	"github.com/pidrive/pidrive/api"
-	"github.com/pidrive/pidrive/internal/auth"
 	"github.com/pidrive/pidrive/internal/config"
 	"github.com/pidrive/pidrive/internal/db"
-	"github.com/pidrive/pidrive/internal/sftpd"
 )
 
 func main() {
@@ -45,20 +43,11 @@ func main() {
 	server.StartIndexer()
 	defer server.StopIndexer()
 
-	// Start SFTP server
-	authSvc := auth.NewAuthService(database)
-	sftpAddr := fmt.Sprintf(":%s", cfg.SFTPPort)
-	sftpServer := sftpd.NewSFTPServer(authSvc, cfg.JuiceFSMountPath, cfg.HostKeyPath, sftpAddr)
-	if err := sftpServer.Start(); err != nil {
-		log.Fatalf("Failed to start SFTP server: %v", err)
-	}
-
 	router := server.Router()
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("pidrive server starting on %s", addr)
 	log.Printf("  Server URL: %s", cfg.ServerURL)
-	log.Printf("  SFTP:       %s", sftpAddr)
 	log.Printf("  Database:   %s", maskURL(cfg.DatabaseURL))
 	log.Printf("  Redis:      %s", cfg.RedisURL)
 	log.Printf("  Mount:      %s", cfg.JuiceFSMountPath)
