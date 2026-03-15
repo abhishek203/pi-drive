@@ -49,21 +49,23 @@ if [ "$EXPECTED" != "$ACTUAL" ]; then
 fi
 echo "Checksum OK."
 
-# Install binary (requires sudo for /usr/local/bin)
-sudo mv "/tmp/${BINARY}" /usr/local/bin/pidrive
-sudo chmod +x /usr/local/bin/pidrive
+# Install binary to ~/.local/bin (no sudo needed)
+INSTALL_DIR="${HOME}/.local/bin"
+mkdir -p "${INSTALL_DIR}"
+mv "/tmp/${BINARY}" "${INSTALL_DIR}/pidrive"
+chmod +x "${INSTALL_DIR}/pidrive"
 
-# Install davfs2 on Linux (needed for WebDAV mount)
+# Add to PATH if not already there
+if ! echo "$PATH" | grep -q "${INSTALL_DIR}"; then
+  echo "Add to your PATH: export PATH=\"\${HOME}/.local/bin:\$PATH\""
+fi
+
+# Check for davfs2 on Linux
 if [ "$OS" = "linux" ]; then
   if ! command -v mount.davfs &>/dev/null; then
-    echo "Installing davfs2 (WebDAV mount support)..."
-    if command -v apt &>/dev/null; then
-      sudo apt update -qq && sudo apt install -y -qq davfs2
-    elif command -v yum &>/dev/null; then
-      sudo yum install -y davfs2
-    else
-      echo "Please install davfs2 manually for WebDAV mount support."
-    fi
+    echo ""
+    echo "Note: davfs2 is needed for WebDAV mount support."
+    echo "  Install it with: sudo apt install davfs2"
   fi
 fi
 
