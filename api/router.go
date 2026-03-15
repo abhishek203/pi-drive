@@ -93,8 +93,11 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/webdav/", s.serveWebDAV)
 	mux.HandleFunc("/webdav", s.serveWebDAV)
 
-	// Binary releases
+	// Binary releases + checksums
 	mux.HandleFunc("GET /releases/", s.serveRelease)
+	mux.HandleFunc("GET /checksums.txt", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "bin/releases/checksums.txt")
+	})
 
 	// Protected routes
 	protected := http.NewServeMux()
