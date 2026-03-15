@@ -16,6 +16,13 @@ var (
 	agentHandlersMu sync.Mutex
 )
 
+// InvalidateAgentHandler removes the cached handler so it gets recreated with fresh share data
+func InvalidateAgentHandler(agentID string) {
+	agentHandlersMu.Lock()
+	defer agentHandlersMu.Unlock()
+	delete(agentHandlers, agentID)
+}
+
 func (s *Server) getAgentWebDAVHandler(agentID string) *webdav.Handler {
 	agentHandlersMu.Lock()
 	defer agentHandlersMu.Unlock()
@@ -24,12 +31,18 @@ func (s *Server) getAgentWebDAVHandler(agentID string) *webdav.Handler {
 		return h
 	}
 
+	// Ensure agent dirs exist
 	agentRoot := filepath.Join(s.cfg.JuiceFSMountPath, "agents", agentID, "files")
 	os.MkdirAll(agentRoot, 0755)
 
 	h := &webdav.Handler{
-		Prefix:     "/webdav",
-		FileSystem: webdav.Dir(agentRoot),
+		Prefix: "/webdav",
+		FileSystem: &agentFS{
+			agentID:      agentID,
+			mountPath:    s.cfg.JuiceFSMountPath,
+			shareService: s.shareService,
+			fileManager:  s.fileManager,
+		},
 		LockSystem: webdav.NewMemLS(),
 	}
 	agentHandlers[agentID] = h

@@ -92,11 +92,7 @@ func (h *ShareHandler) Share(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Copy file to links dir
-		if err := h.fileManager.CopyToLink(agent.ID, req.Path, sh.ID); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to copy file: "+err.Error())
-			return
-		}
+		// No file copy — link serves directly from owner's file
 
 		h.activityService.Log(agent.ID, "share", req.Path, map[string]interface{}{
 			"type": "link", "share_id": sh.ID, "url": sh.URL,
@@ -124,17 +120,11 @@ func (h *ShareHandler) Share(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Copy file to target's shared dir
-		destFilename, err := h.fileManager.CopyToShared(agent.ID, req.Path, target.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to copy file: "+err.Error())
-			return
-		}
-
+		// No file copy — shared files are served from owner's directory via WebDAV
 		h.activityService.Log(agent.ID, "share", req.Path, map[string]interface{}{
 			"type": "direct", "to": email,
 		})
-		h.activityService.Log(target.ID, "received", destFilename, map[string]interface{}{
+		h.activityService.Log(target.ID, "received", req.Path, map[string]interface{}{
 			"from": agent.Email,
 		})
 
@@ -183,11 +173,6 @@ func (h *ShareHandler) ShareLink(w http.ResponseWriter, r *http.Request) {
 	sh, err := h.shareService.Create(input)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	if err := h.fileManager.CopyToLink(agent.ID, req.Path, sh.ID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to copy file: "+err.Error())
 		return
 	}
 
@@ -248,13 +233,7 @@ func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clean up files
-	if sh.ShareType == "direct" && sh.TargetID != nil {
-		filename := filepath.Base(sh.SourcePath)
-		h.fileManager.RemoveFromShared(*sh.TargetID, filename)
-	} else if sh.ShareType == "link" {
-		h.fileManager.RemoveLink(sh.ID)
-	}
+	// No file cleanup needed — shares are references, not copies
 
 	h.activityService.Log(agent.ID, "revoke", sh.SourcePath, map[string]interface{}{
 		"share_id": shareID,
@@ -292,9 +271,12 @@ func (h *ShareHandler) ServeShareLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get file path
-	filePath, err := h.fileManager.GetLinkFilePath(shareID)
-	if err != nil {
+	// Serve directly from owner's file — no copy
+	filePath := filepath.Join(
+		h.fileManager.AgentFilesPath(sh.OwnerID),
+		sh.SourcePath,
+	)
+	if _, err := os.Stat(filePath); err != nil {
 		writeError(w, http.StatusNotFound, "file not found")
 		return
 	}

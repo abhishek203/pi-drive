@@ -164,7 +164,24 @@ func (s *ShareService) ListByTarget(targetID string) ([]Share, error) {
 	}
 	defer rows.Close()
 
-	return s.scanShares(rows)
+	var shares []Share
+	for rows.Next() {
+		var sh Share
+		var ownerEmail string
+		if err := rows.Scan(
+			&sh.ID, &sh.OwnerID, &sh.SourcePath, &sh.ShareType,
+			&sh.TargetID, &sh.Permission, &sh.CreatedAt, &sh.ExpiresAt,
+			&sh.Revoked, &ownerEmail,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan share: %w", err)
+		}
+		sh.OwnerEmail = ownerEmail
+		if sh.ShareType == "link" {
+			sh.URL = fmt.Sprintf("%s/s/%s", s.serverURL, sh.ID)
+		}
+		shares = append(shares, sh)
+	}
+	return shares, nil
 }
 
 func (s *ShareService) scanShares(rows *sql.Rows) ([]Share, error) {

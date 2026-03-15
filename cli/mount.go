@@ -122,11 +122,12 @@ expect eof
 
 		fmt.Println()
 		fmt.Println("✓ Drive mounted!")
-		fmt.Printf("  Your files: %s/\n", drivePath)
+		fmt.Printf("  Your files:    %s/my/\n", drivePath)
+		fmt.Printf("  Shared with you: %s/shared/\n", drivePath)
 		fmt.Println()
 		fmt.Println("Try:")
-		fmt.Printf("  ls %s/\n", drivePath)
-		fmt.Printf("  echo 'hello' > %s/test.txt\n", drivePath)
+		fmt.Printf("  ls %s/my/\n", drivePath)
+		fmt.Printf("  echo 'hello' > %s/my/test.txt\n", drivePath)
 	},
 }
 
