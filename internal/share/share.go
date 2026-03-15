@@ -50,12 +50,13 @@ func generateShareID() (string, error) {
 }
 
 type CreateShareInput struct {
-	OwnerID    string
-	SourcePath string
-	ShareType  string // "direct" or "link"
-	TargetID   string // for direct shares
-	Permission string
-	ExpiresIn  *time.Duration
+	OwnerID     string
+	SourcePath  string
+	ShareType   string // "direct" or "link"
+	TargetID    string // for direct shares (registered user)
+	TargetEmail string // for pending shares (unregistered user)
+	Permission  string
+	ExpiresIn   *time.Duration
 }
 
 func (s *ShareService) Create(input CreateShareInput) (*Share, error) {
@@ -80,12 +81,20 @@ func (s *ShareService) Create(input CreateShareInput) (*Share, error) {
 	if input.TargetID != "" {
 		targetID = &input.TargetID
 	}
+	var targetEmail *string
+	if input.TargetEmail != "" {
+		targetEmail = &input.TargetEmail
+	}
+	status := "active"
+	if input.TargetID == "" && input.TargetEmail != "" {
+		status = "pending"
+	}
 
 	err = s.db.QueryRow(`
-		INSERT INTO shares (id, owner_id, source_path, share_type, target_id, permission, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO shares (id, owner_id, source_path, share_type, target_id, target_email, permission, expires_at, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, owner_id, source_path, share_type, target_id, permission, created_at, expires_at, revoked
-	`, id, input.OwnerID, input.SourcePath, input.ShareType, targetID, permission, expiresAt).Scan(
+	`, id, input.OwnerID, input.SourcePath, input.ShareType, targetID, targetEmail, permission, expiresAt, status).Scan(
 		&share.ID, &share.OwnerID, &share.SourcePath, &share.ShareType,
 		&share.TargetID, &share.Permission, &share.CreatedAt, &share.ExpiresAt, &share.Revoked,
 	)
@@ -240,6 +249,18 @@ func (s *ShareService) RevokeByPathAndTarget(ownerID, path, targetID string) err
 		return fmt.Errorf("share not found or already revoked")
 	}
 	return nil
+}
+
+// ActivatePendingShares converts pending shares to active when a user registers
+func (s *ShareService) ActivatePendingShares(email, agentID string) (int64, error) {
+	result, err := s.db.Exec(`
+		UPDATE shares SET target_id = $1, status = 'active'
+		WHERE target_email = $2 AND status = 'pending' AND NOT revoked
+	`, agentID, email)
+	if err != nil {
+		return 0, fmt.Errorf("failed to activate pending shares: %w", err)
+	}
+	return result.RowsAffected()
 }
 
 // CleanupExpired removes expired link shares

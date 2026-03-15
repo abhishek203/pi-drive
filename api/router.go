@@ -61,7 +61,7 @@ func NewServer(cfg *config.Config, database *db.DB) *Server {
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 
-	authHandler := NewAuthHandler(s.authService, s.emailService)
+	authHandler := NewAuthHandler(s.authService, s.emailService, s.shareService)
 	mountHandler := NewMountHandler(s.mountService, s.fileManager, s.activityService)
 	shareHandler := NewShareHandler(s.shareService, s.fileManager, s.authService, s.emailService, s.activityService, s.billingService)
 	searchHandler := NewSearchHandler(s.searchService, s.indexer)

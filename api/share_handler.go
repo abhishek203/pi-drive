@@ -107,14 +107,32 @@ func (h *ShareHandler) Share(w http.ResponseWriter, r *http.Request) {
 		if email == "" {
 			email = req.TargetEmail
 		}
-		// Direct share
+
+		input.ShareType = "direct"
+
+		// Check if recipient exists
 		target, err := h.authService.GetAgentByEmail(email)
 		if err != nil {
-			writeError(w, http.StatusNotFound, "agent not found: "+email)
+			// Recipient not registered — create pending share
+			input.TargetEmail = email
+			sh, err := h.shareService.Create(input)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			h.activityService.Log(agent.ID, "share", req.Path, map[string]interface{}{
+				"type": "direct", "to": email, "status": "pending",
+			})
+
+			// Send invite email
+			go h.emailService.SendShareInvite(email, agent.Email, filepath.Base(req.Path))
+
+			sh.TargetEmail = email
+			writeJSON(w, http.StatusCreated, sh)
 			return
 		}
 
-		input.ShareType = "direct"
 		input.TargetID = target.ID
 
 		sh, err := h.shareService.Create(input)

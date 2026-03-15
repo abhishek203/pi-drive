@@ -1,18 +1,21 @@
 package api
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/pidrive/pidrive/internal/auth"
+	"github.com/pidrive/pidrive/internal/share"
 )
 
 type AuthHandler struct {
 	authService  *auth.AuthService
 	emailService *auth.EmailService
+	shareService *share.ShareService
 }
 
-func NewAuthHandler(authService *auth.AuthService, emailService *auth.EmailService) *AuthHandler {
-	return &AuthHandler{authService: authService, emailService: emailService}
+func NewAuthHandler(authService *auth.AuthService, emailService *auth.EmailService, shareService *share.ShareService) *AuthHandler {
+	return &AuthHandler{authService: authService, emailService: emailService, shareService: shareService}
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +108,11 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
+	}
+
+	// Activate any pending shares for this email
+	if activated, err := h.shareService.ActivatePendingShares(req.Email, agent.ID); err == nil && activated > 0 {
+		log.Printf("[shares] Activated %d pending shares for %s", activated, req.Email)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
