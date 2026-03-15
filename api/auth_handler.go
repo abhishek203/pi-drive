@@ -115,6 +115,9 @@ func (h *AuthHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[shares] Activated %d pending shares for %s", activated, req.Email)
 	}
 
+	// Notify admin of new signup
+	go h.emailService.SendAdminNotification("abhishek@ressl.ai", agent.Email, agent.Name)
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"api_key": apiKey,
 		"agent":   agent,

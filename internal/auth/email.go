@@ -161,3 +161,38 @@ Once registered, the shared file will appear in your drive automatically.
 	log.Printf("[EMAIL] Share invite sent to %s (from %s, file: %s)", toEmail, fromEmail, filename)
 	return nil
 }
+
+func (e *EmailService) SendAdminNotification(adminEmail, userEmail, userName string) error {
+	if e.ResendAPIKey == "" {
+		log.Printf("[DEV] New signup: %s (%s)", userEmail, userName)
+		return nil
+	}
+
+	payload := map[string]string{
+		"from":    fmt.Sprintf("pidrive <%s>", e.FromEmail),
+		"to":      adminEmail,
+		"subject": fmt.Sprintf("New pidrive signup: %s", userEmail),
+		"text":    fmt.Sprintf("%s (\"%s\") just verified their pidrive account.", userEmail, userName),
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+e.ResendAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	log.Printf("[EMAIL] Admin notified of new signup: %s", userEmail)
+	return nil
+}
