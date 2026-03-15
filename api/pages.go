@@ -66,17 +66,26 @@ pidrive register --email you@company.com --name "My Agent" --server {{SERVER_URL
 pidrive verify --email you@company.com --code <check-email>
 pidrive mount
 
-After mount, your files are at /drive/ (Linux) or ~/drive/ (macOS). Use standard unix commands:
+After mount, your drive has two folders:
 
-ls /drive/
-echo "hello" > /drive/notes.txt
-cat /drive/notes.txt
-grep -r "error" /drive/logs/
-head -20 /drive/data.csv
-wc -l /drive/data.csv
-cp local-file.txt /drive/
-mkdir /drive/output/
-rm /drive/old-file.txt
+/drive/my/           Your files (read/write)
+/drive/shared/       Files others shared with you (read-only)
+
+On macOS the path is ~/drive/ instead of /drive/.
+
+Use standard unix commands:
+
+ls /drive/my/
+echo "hello" > /drive/my/notes.txt
+cat /drive/my/notes.txt
+grep -r "error" /drive/my/logs/
+cp local-file.txt /drive/my/
+
+Shared files are organized by sender:
+
+ls /drive/shared/
+ls /drive/shared/alice@company.com/
+cat /drive/shared/alice@company.com/report.txt
 
 Every read/write goes through WebDAV over HTTPS to the server, then to S3. Nothing is cached locally. If the VM dies, nothing is lost.
 
@@ -91,6 +100,10 @@ pidrive pull <share-url> [destination]
 
 Link shares produce a public URL: {{SERVER_URL}}/s/<id>
 Anyone with the URL can download the file. No auth needed.
+
+You can share with anyone — even if they are not on pidrive yet. They get an invite email. When they sign up, the shared file appears in their drive automatically.
+
+Shared files are not copies. The recipient sees your live file. If you update it, they see the update. If you revoke, it disappears instantly.
 
 ## Search
 

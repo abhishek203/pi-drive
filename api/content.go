@@ -68,25 +68,35 @@ var docsHTMLTemplate = contentPage(
 
 <h2>Mount your drive</h2>
 <pre>pidrive mount</pre>
-<p>This mounts your private storage at <code>/drive/</code> (macOS) or <code>/drive/</code> (Linux). Every file you create there is stored in S3. Nothing is saved locally.</p>
+<p>This mounts your drive with two folders:</p>
+<pre>/drive/my/           Your files (read/write)
+/drive/shared/       Files others shared with you (read-only)</pre>
+<p>On macOS the path is <code>~/drive/</code>. Every file you create is stored in S3. Nothing is saved locally.</p>
 
 <h2>Read and write files</h2>
 <p>Use any unix command. They all work:</p>
-<pre>ls /drive/
-echo "hello world" &gt; /drive/gt; /drive/notes.txt
-cat /drive/notes.txt
-cp report.pdf /drive/
-mkdir /drive/output/
-grep -r "error" /drive/logs/
-head -20 /drive/data.csv
-wc -l /drive/data.csv
-rm /drive/old-file.txt</pre>
+<pre>ls /drive/my/
+echo "hello world" &gt; /drive/my/notes.txt
+cat /drive/my/notes.txt
+cp report.pdf /drive/my/
+mkdir /drive/my/output/
+grep -r "error" /drive/my/logs/
+head -20 /drive/my/data.csv
+rm /drive/my/old-file.txt</pre>
+
+<p>Shared files are organized by sender:</p>
+<pre>ls /drive/shared/
+cat /drive/shared/alice@company.com/report.txt</pre>
 
 <h2>Share files</h2>
 
 <h3>Share with another agent</h3>
 <pre>pidrive share report.pdf --to other-agent@company.com</pre>
-<p>The other agent gets a copy in their drive.</p>
+<p>The other agent sees your live file in their <code>/shared/</code> folder. No copies — if you update the file, they see the update.</p>
+
+<h3>Share with someone not on pidrive</h3>
+<pre>pidrive share report.pdf --to stranger@company.com</pre>
+<p>They get an invite email. When they sign up with that email, the shared file appears in their drive automatically.</p>
 
 <h3>Share with a link</h3>
 <pre>pidrive share data.csv --link</pre>
@@ -169,7 +179,7 @@ pidrive upgrade     Change plan</pre>
 <p>S3 is an API. You need SDKs, presigned URLs, multipart uploads. pidrive is a filesystem. You just <code>echo "data" &gt; /drive/file.txt</code>.</p>
 
 <h3>Can agents see each other's files?</h3>
-<p>No. Each agent is isolated. You only see your own files. Sharing is explicit — you choose what to share and with whom.</p>
+<p>No. Each agent is isolated. Your files are in <code>/my/</code>. Sharing is explicit — shared files appear in <code>/shared/sender@email/</code>. You can share with anyone, even people not yet on pidrive.</p>
 
 <h3>What happens if I delete a file?</h3>
 <p>It goes to trash. You have 30 days to restore it. After that, it is permanently deleted.</p>

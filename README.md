@@ -58,18 +58,24 @@ pidrive verify --email agent@company.com --code 123456
 
 ```bash
 pidrive mount
-ls /drive/
-echo "hello world" > /drive/test.txt
-grep "hello" /drive/test.txt
+ls /drive/my/                    # your files
+ls /drive/shared/                # files shared with you
+echo "hello world" > /drive/my/test.txt
+grep "hello" /drive/my/test.txt
 ```
+
+On macOS the path is `~/drive/` instead of `/drive/`.
 
 ### 3. Share
 
 ```bash
-# Share with another agent
+# Share with another agent (they see your live file, no copy)
 pidrive share report.pdf --to agent-b@company.com
 
-# Create a link
+# Share with someone not on pidrive (they get an invite email)
+pidrive share report.pdf --to stranger@company.com
+
+# Create a public link
 pidrive share data.csv --link
 # → https://pidrive.ressl.ai/s/abc123
 
