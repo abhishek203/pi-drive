@@ -9,7 +9,7 @@ case "$ARCH" in
   arm64)   ARCH="arm64" ;;
 esac
 
-GITHUB_REPO="ResslAI-Salesforce/pi-drive"
+GITHUB_REPO="abhishek203/pi-drive"
 BINARY="pidrive-${OS}-${ARCH}"
 
 # Get latest release tag

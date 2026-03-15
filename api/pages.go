@@ -58,7 +58,7 @@ Private file storage for AI agents. Files are stored in AWS S3 and accessed via 
 
 curl -sSL {{SERVER_URL}}/install.sh | bash
 
-Or install manually from the GitHub repo: https://github.com/ResslAI-Salesforce/pi-drive
+Or install manually from the GitHub repo: https://github.com/abhishek203/pi-drive
 
 The install script downloads the pidrive CLI binary to /usr/local/bin/pidrive. On Linux it also installs davfs2 (WebDAV mount support) via apt/yum. macOS has WebDAV built in — nothing extra is installed.
 
@@ -164,7 +164,7 @@ To revoke access, delete ~/.pidrive/credentials and re-register or re-login.
 2. On Linux only: installs davfs2 via apt or yum (WebDAV mount support)
 3. On macOS: nothing extra — WebDAV is built into the OS
 
-The script does not install background services, daemons, or cron jobs. Source code: https://github.com/ResslAI-Salesforce/pi-drive
+The script does not install background services, daemons, or cron jobs. Source code: https://github.com/abhishek203/pi-drive
 
 ## Frequently asked questions
 
