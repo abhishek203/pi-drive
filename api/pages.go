@@ -52,13 +52,15 @@ description: Private file storage for AI agents. Store, read, write, search, and
 
 # pidrive
 
-Private file storage for AI agents. Files are stored in AWS S3 and accessed via WebDAV mount. No files are stored locally — the mount point is a tunnel to the server.
+Private file storage for AI agents. Files are stored in AWS S3 and accessed via WebDAV mount.
 
 ## Install
 
 curl -sSL {{SERVER_URL}}/install.sh | bash
 
-This installs the pidrive CLI. On Linux it also installs davfs2. macOS has WebDAV built in.
+Or install manually from the GitHub repo: https://github.com/ResslAI-Salesforce/pi-drive
+
+The install script downloads the pidrive CLI binary to /usr/local/bin/pidrive. On Linux it also installs davfs2 (WebDAV mount support) via apt/yum. macOS has WebDAV built in — nothing extra is installed.
 
 ## Get started
 
@@ -87,7 +89,7 @@ ls /drive/shared/
 ls /drive/shared/alice@company.com/
 cat /drive/shared/alice@company.com/report.txt
 
-Every read/write goes through WebDAV over HTTPS to the server, then to S3. Nothing is cached locally. If the VM dies, nothing is lost.
+Every read/write goes through WebDAV over HTTPS (TLS encrypted in transit) to the server, then to S3. The WebDAV client (davfs2 on Linux, mount_webdav on macOS) uses a small local cache for recently accessed files to improve read performance. The cache is temporary and cleared on unmount. All persistent data lives in S3. If the VM dies, nothing is lost.
 
 ## Share
 
@@ -99,7 +101,7 @@ pidrive revoke <share-id>
 pidrive pull <share-url> [destination]
 
 Link shares produce a public URL: {{SERVER_URL}}/s/<id>
-Anyone with the URL can download the file. No auth needed.
+WARNING: Anyone with the URL can download the file without authentication. Do not use link shares for sensitive data. Use direct shares (--to email) for private sharing.
 
 You can share with anyone — even if they are not on pidrive yet. They get an invite email. When they sign up, the shared file appears in their drive automatically.
 
@@ -143,11 +145,26 @@ Shows mount, share, revoke, restore events.
 ## How it works
 
 1. pidrive mount connects your machine to the pidrive server via WebDAV over HTTPS
-2. Your API key authenticates the connection
+2. Your API key authenticates the connection (HTTP Basic Auth over TLS)
 3. The server maps your session to your private directory
-4. All file data is stored in AWS S3
-5. Each agent is isolated — you can only see your own files
-6. Sharing copies files between agent directories on the server
+4. All file data is stored in AWS S3 (encrypted in transit via HTTPS)
+5. Each agent is isolated — you can only see your own files under /my/
+6. Sharing creates a reference, not a copy. Recipients read from your live file via /shared/. Revoking removes access instantly.
+
+## Credentials
+
+On registration, you receive an API key (pk_ prefix, 32 random characters).
+It is stored locally at ~/.pidrive/credentials (file permissions 0600, owner-only read).
+The API key is sent as HTTP Basic Auth password over HTTPS on every WebDAV request.
+To revoke access, delete ~/.pidrive/credentials and re-register or re-login.
+
+## What the install script does
+
+1. Downloads the pidrive CLI binary (~10 MB) to /usr/local/bin/pidrive
+2. On Linux only: installs davfs2 via apt or yum (WebDAV mount support)
+3. On macOS: nothing extra — WebDAV is built into the OS
+
+The script does not install background services, daemons, or cron jobs. Source code: https://github.com/ResslAI-Salesforce/pi-drive
 
 ## Frequently asked questions
 
@@ -164,7 +181,7 @@ Q: Can agents see each other's files?
 A: No. Each agent has isolated private storage. Sharing is explicit — you choose what to share and with whom.
 
 Q: Where are files stored?
-A: All files are stored in AWS S3. Nothing is stored on the agent's machine. The mount point is a tunnel to the server.
+A: All persistent data is in AWS S3. The WebDAV client keeps a small temporary cache of recently accessed files for performance. The cache is cleared on unmount.
 
 Q: What happens if my agent's VM dies?
 A: Nothing is lost. All data is in S3. Mount again from a new VM and all files are there.
