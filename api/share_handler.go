@@ -17,6 +17,7 @@ type ShareHandler struct {
 	shareService    *shareService.ShareService
 	fileManager     *shareService.FileManager
 	authService     *auth.AuthService
+	emailService    *auth.EmailService
 	activityService *activity.ActivityService
 	billingService  *billing.BillingService
 }
@@ -25,6 +26,7 @@ func NewShareHandler(
 	ss *shareService.ShareService,
 	fm *shareService.FileManager,
 	as *auth.AuthService,
+	es *auth.EmailService,
 	act *activity.ActivityService,
 	bs *billing.BillingService,
 ) *ShareHandler {
@@ -32,6 +34,7 @@ func NewShareHandler(
 		shareService:    ss,
 		fileManager:     fm,
 		authService:     as,
+		emailService:    es,
 		activityService: act,
 		billingService:  bs,
 	}
@@ -127,6 +130,9 @@ func (h *ShareHandler) Share(w http.ResponseWriter, r *http.Request) {
 		h.activityService.Log(target.ID, "received", req.Path, map[string]interface{}{
 			"from": agent.Email,
 		})
+
+		// Notify recipient
+		go h.emailService.SendShareNotification(email, agent.Email, filepath.Base(req.Path))
 
 		writeJSON(w, http.StatusCreated, sh)
 	} else {

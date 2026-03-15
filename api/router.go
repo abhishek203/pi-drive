@@ -63,7 +63,7 @@ func (s *Server) Router() http.Handler {
 
 	authHandler := NewAuthHandler(s.authService, s.emailService)
 	mountHandler := NewMountHandler(s.mountService, s.fileManager, s.activityService)
-	shareHandler := NewShareHandler(s.shareService, s.fileManager, s.authService, s.activityService, s.billingService)
+	shareHandler := NewShareHandler(s.shareService, s.fileManager, s.authService, s.emailService, s.activityService, s.billingService)
 	searchHandler := NewSearchHandler(s.searchService, s.indexer)
 	activityHandler := NewActivityHandler(s.activityService)
 	trashHandler := NewTrashHandler(s.trashService, s.activityService)
