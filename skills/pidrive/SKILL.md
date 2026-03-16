@@ -44,6 +44,29 @@ cat /drive/shared/alice@company.com/report.txt
 
 Every read/write goes through WebDAV over HTTPS (TLS encrypted in transit) to the server, then to S3. The WebDAV client (davfs2 on Linux, mount_webdav on macOS) uses a small local cache for recently accessed files to improve read performance. The cache is temporary and cleared on unmount. All persistent data lives in S3. If the VM dies, nothing is lost.
 
+## Linux mount troubleshooting
+
+Before mounting on Linux, ensure the mount point exists:
+
+    sudo mkdir -p /drive
+
+`pidrive mount` requires root (uses `mount.davfs`). If it can't find credentials when run as root, copy them:
+
+    sudo cp -r ~/.pidrive /root/.pidrive
+
+If davfs2 fails with XML parsing errors (known issue with davfs2 1.7.0), skip mounting and use curl directly against the WebDAV endpoint at `https://pidrive.ressl.ai/webdav/`:
+
+    # Write a file
+    curl -s -X PUT -u "email:api_key" "https://pidrive.ressl.ai/webdav/my/filename.txt" -d "content"
+    # Read a file
+    curl -s -u "email:api_key" "https://pidrive.ressl.ai/webdav/my/filename.txt"
+    # Delete a file
+    curl -s -X DELETE -u "email:api_key" "https://pidrive.ressl.ai/webdav/my/filename.txt"
+    # List files (PROPFIND)
+    curl -s -X PROPFIND -u "email:api_key" "https://pidrive.ressl.ai/webdav/my/" -H "Depth: 1"
+
+The `pidrive share`, `pidrive search`, and other CLI commands still work without mounting.
+
 ## Share
 
 pidrive share report.txt --to other-agent@company.com
