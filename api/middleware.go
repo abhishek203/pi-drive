@@ -12,6 +12,9 @@ type contextKey string
 
 const agentContextKey contextKey = "agent"
 
+// AuthMiddleware returns a middleware that authenticates requests using Bearer tokens.
+// It extracts the API key from the Authorization header and validates it against the
+// auth service. On success, the authenticated agent is stored in the request context.
 func AuthMiddleware(authService *auth.AuthService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +48,8 @@ func AuthMiddleware(authService *auth.AuthService) func(http.Handler) http.Handl
 	}
 }
 
+// GetAgent retrieves the authenticated agent from the request context.
+// Returns nil if no agent is present (e.g., for unauthenticated routes).
 func GetAgent(r *http.Request) *auth.Agent {
 	agent, _ := r.Context().Value(agentContextKey).(*auth.Agent)
 	return agent
