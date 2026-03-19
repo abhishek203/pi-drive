@@ -169,7 +169,7 @@ func (idx *Indexer) indexAgent(agentID, filesDir string) error {
 			text = text[:1024*1024]
 		}
 
-		_, err = idx.db.Exec(`
+		if _, err = idx.db.Exec(`
 			INSERT INTO search_index (agent_id, path, filename, content, size_bytes, modified_at, content_hash)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			ON CONFLICT (agent_id, path) DO UPDATE SET
@@ -179,7 +179,9 @@ func (idx *Indexer) indexAgent(agentID, filesDir string) error {
 				modified_at = EXCLUDED.modified_at,
 				content_hash = EXCLUDED.content_hash,
 				indexed_at = now()
-		`, agentID, relPath, filepath.Base(path), text, info.Size(), info.ModTime(), contentHash)
+		`, agentID, relPath, filepath.Base(path), text, info.Size(), info.ModTime(), contentHash); err != nil {
+			log.Printf("[indexer] failed to index file %s: %v", relPath, err)
+		}
 
 		return nil
 	})
