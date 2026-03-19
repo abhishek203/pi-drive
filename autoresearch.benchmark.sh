@@ -46,9 +46,9 @@ fi
 # Total issues (primary metric - only staticcheck and go vet)
 TOTAL_ISSUES=$((STATICCHECK_ISSUES + GOVET_ISSUES + GOFMT_ISSUES))
 
-# Measure build time
+# Measure build time (with stripped binary for production-like size)
 START_TIME=$(python3 -c 'import time; print(int(time.time() * 1000))')
-go build -o /tmp/pidrive-bench ./cmd/pidrive
+go build -ldflags="-s -w" -o /tmp/pidrive-bench ./cmd/pidrive
 END_TIME=$(python3 -c 'import time; print(int(time.time() * 1000))')
 BUILD_MS=$((END_TIME - START_TIME))
 

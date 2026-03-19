@@ -1,13 +1,16 @@
-.PHONY: build build-cli build-server run-server run-cli dev migrate clean build-all
+.PHONY: build build-cli build-server run-server run-cli dev migrate clean build-all test
+
+# Strip debug symbols for smaller binaries
+LDFLAGS := -ldflags="-s -w"
 
 # Build both binaries
 build: build-cli build-server
 
 build-cli:
-	go build -o bin/pidrive ./cmd/pidrive
+	go build $(LDFLAGS) -o bin/pidrive ./cmd/pidrive
 
 build-server:
-	go build -o bin/pidrive-server ./cmd/pidrive-server
+	go build $(LDFLAGS) -o bin/pidrive-server ./cmd/pidrive-server
 
 # Run server locally
 run-server: build-server
@@ -26,12 +29,16 @@ down:
 
 # Build for all platforms
 build-all:
-	GOOS=linux GOARCH=amd64 go build -o bin/pidrive-linux-amd64 ./cmd/pidrive
-	GOOS=linux GOARCH=arm64 go build -o bin/pidrive-linux-arm64 ./cmd/pidrive
-	GOOS=darwin GOARCH=amd64 go build -o bin/pidrive-darwin-amd64 ./cmd/pidrive
-	GOOS=darwin GOARCH=arm64 go build -o bin/pidrive-darwin-arm64 ./cmd/pidrive
-	GOOS=linux GOARCH=amd64 go build -o bin/pidrive-server-linux-amd64 ./cmd/pidrive-server
-	GOOS=linux GOARCH=arm64 go build -o bin/pidrive-server-linux-arm64 ./cmd/pidrive-server
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/pidrive-linux-amd64 ./cmd/pidrive
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o bin/pidrive-linux-arm64 ./cmd/pidrive
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o bin/pidrive-darwin-amd64 ./cmd/pidrive
+	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o bin/pidrive-darwin-arm64 ./cmd/pidrive
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/pidrive-server-linux-amd64 ./cmd/pidrive-server
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o bin/pidrive-server-linux-arm64 ./cmd/pidrive-server
+
+# Run tests
+test:
+	go test ./...
 
 clean:
 	rm -rf bin/
