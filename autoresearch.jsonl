@@ -2,3 +2,4 @@
 {"run":1,"commit":"db6cb34","metric":1,"metrics":{"binary_kb":9236,"build_ms":307},"status":"keep","description":"Baseline: 1 static analysis issue, 9236KB binary, 307ms build","timestamp":1773962069824,"segment":0,"confidence":null}
 {"run":2,"commit":"f3e0a6b","metric":0,"metrics":{"binary_kb":9236,"build_ms":316},"status":"keep","description":"Fix unused err in indexer.go - proper error logging for db.Exec","timestamp":1773962093663,"segment":0,"confidence":null}
 {"run":3,"commit":"57d31f7","metric":0,"metrics":{"binary_kb":9236,"build_ms":315},"status":"keep","description":"gofmt formatting fixes in sftpd/handler.go","timestamp":1773962128934,"segment":0,"confidence":null}
+{"run":4,"commit":"a08123d","metric":0,"metrics":{"binary_kb":9236,"build_ms":323,"deadcode":33,"loc":6201},"status":"keep","description":"Add deadcode and loc tracking to benchmark","timestamp":1773962228957,"segment":0,"confidence":null}
