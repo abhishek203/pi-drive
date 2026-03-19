@@ -1,29 +1,34 @@
 # Autoresearch Ideas
 
+## Completed Optimizations ✓
+- [x] Fixed static analysis issue in indexer.go
+- [x] Removed unused sftpd package (-316 LOC)
+- [x] Removed unused mount helper functions (-113 LOC)  
+- [x] Added `-ldflags="-s -w"` for 31% smaller binaries
+- [x] Added unit tests for auth, share, config, search, api packages
+- [x] Added godoc comments to helpers.go and middleware.go
+
 ## Future Optimization Opportunities
 
 ### Dead Code Removal (Conservative)
-- Review if `InvalidateAgentHandler` in webdav_handler.go is needed or can be called
+- Review if `InvalidateAgentHandler` in webdav_handler.go should be called somewhere
 - Review if billing service dead methods are intended for future Stripe integration
-- Review if mount service methods are intended for future JuiceFS direct mount feature
+- Review if mount service methods (FormatJuiceFS, MountMaster, etc.) are needed
 
 ### Performance Improvements
 - Add database connection pooling configuration
 - Consider prepared statements for frequently executed queries
 - Add caching for frequently accessed data (plans, agent info)
+- Cache parsed templates in templates package
 
 ### Code Quality
 - Add more unit tests for:
-  - Search service
-  - Trash service  
+  - Trash service
   - Activity service
+  - Billing service
 - Add integration tests for API handlers
 - Add benchmarks for critical paths
-
-### Binary Size Reduction
-- Review if all dependencies are necessary
-- Consider using `-ldflags="-s -w"` for production builds
-- Try TinyGo for CLI binary (if compatible)
+- Increase test coverage to 50%+
 
 ### Security Improvements
 - Rate limit implementation could use Redis for distributed rate limiting
@@ -31,5 +36,6 @@
 - Add request ID tracing
 
 ### Documentation
-- Add godoc comments to exported functions
+- Add godoc comments to remaining exported functions
 - Add API documentation (OpenAPI/Swagger)
+- Add CONTRIBUTING.md
