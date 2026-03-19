@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/pidrive/pidrive/internal/templates"
 )
 
 type EmailService struct {
@@ -21,20 +23,15 @@ func NewEmailService(resendAPIKey, fromEmail string) *EmailService {
 	}
 }
 
-func (e *EmailService) SendVerificationCode(toEmail, code string) error {
-	// Dev mode: no API key configured, just log
-	if e.ResendAPIKey == "" {
-		log.Printf("[DEV] Verification code for %s: %s", toEmail, code)
-		return nil
-	}
+type emailPayload struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Text    string `json:"text"`
+	HTML    string `json:"html,omitempty"`
+}
 
-	payload := map[string]string{
-		"from":    fmt.Sprintf("pidrive <%s>", e.FromEmail),
-		"to":      toEmail,
-		"subject": "Your pidrive verification code",
-		"text":    fmt.Sprintf("Your pidrive verification code is: %s\n\nThis code expires in 15 minutes.", code),
-	}
-
+func (e *EmailService) sendEmail(payload emailPayload) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal email payload: %w", err)
@@ -56,6 +53,35 @@ func (e *EmailService) SendVerificationCode(toEmail, code string) error {
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("resend API error (%d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+func (e *EmailService) SendVerificationCode(toEmail, code string) error {
+	// Dev mode: no API key configured, just log
+	if e.ResendAPIKey == "" {
+		log.Printf("[DEV] Verification code for %s: %s", toEmail, code)
+		return nil
+	}
+
+	// Render HTML template
+	html, err := templates.RenderVerification(code)
+	if err != nil {
+		log.Printf("[EMAIL] Failed to render verification template: %v", err)
+		html = "" // Fall back to text-only
+	}
+
+	payload := emailPayload{
+		From:    fmt.Sprintf("pidrive <%s>", e.FromEmail),
+		To:      toEmail,
+		Subject: "Your pidrive verification code",
+		Text:    fmt.Sprintf("Your pidrive verification code is: %s\n\nThis code expires in 15 minutes.\n\nIf you didn't request this code, you can safely ignore this email.", code),
+		HTML:    html,
+	}
+
+	if err := e.sendEmail(payload); err != nil {
+		return err
 	}
 
 	log.Printf("[EMAIL] Verification code sent to %s", toEmail)
@@ -68,11 +94,18 @@ func (e *EmailService) SendShareNotification(toEmail, fromEmail, filename string
 		return nil
 	}
 
-	payload := map[string]string{
-		"from":    fmt.Sprintf("pidrive <%s>", e.FromEmail),
-		"to":      toEmail,
-		"subject": fmt.Sprintf("%s shared \"%s\" with you", fromEmail, filename),
-		"text": fmt.Sprintf(`%s shared a file with you on pidrive.
+	// Render HTML template
+	html, err := templates.RenderShareNotification(fromEmail, filename)
+	if err != nil {
+		log.Printf("[EMAIL] Failed to render share notification template: %v", err)
+		html = ""
+	}
+
+	payload := emailPayload{
+		From:    fmt.Sprintf("pidrive <%s>", e.FromEmail),
+		To:      toEmail,
+		Subject: fmt.Sprintf("%s shared \"%s\" with you", fromEmail, filename),
+		Text: fmt.Sprintf(`%s shared a file with you on pidrive.
 
 File: %s
 
@@ -83,29 +116,11 @@ View it in your drive:
 Or run:
   pidrive shared
 `, fromEmail, filename, fromEmail, filename),
+		HTML: html,
 	}
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal email payload: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+e.ResendAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("resend API error (%d): %s", resp.StatusCode, string(respBody))
+	if err := e.sendEmail(payload); err != nil {
+		return err
 	}
 
 	log.Printf("[EMAIL] Share notification sent to %s (from %s, file: %s)", toEmail, fromEmail, filename)
@@ -118,11 +133,18 @@ func (e *EmailService) SendShareInvite(toEmail, fromEmail, filename string) erro
 		return nil
 	}
 
-	payload := map[string]string{
-		"from":    fmt.Sprintf("pidrive <%s>", e.FromEmail),
-		"to":      toEmail,
-		"subject": fmt.Sprintf("%s shared \"%s\" with you on pidrive", fromEmail, filename),
-		"text": fmt.Sprintf(`%s shared a file with you on pidrive.
+	// Render HTML template
+	html, err := templates.RenderShareInvite(fromEmail, filename, toEmail)
+	if err != nil {
+		log.Printf("[EMAIL] Failed to render share invite template: %v", err)
+		html = ""
+	}
+
+	payload := emailPayload{
+		From:    fmt.Sprintf("pidrive <%s>", e.FromEmail),
+		To:      toEmail,
+		Subject: fmt.Sprintf("%s shared \"%s\" with you on pidrive", fromEmail, filename),
+		Text: fmt.Sprintf(`%s shared a file with you on pidrive.
 
 File: %s
 
@@ -133,29 +155,11 @@ To access it, sign up for pidrive (free):
 
 Once registered, the shared file will appear in your drive automatically.
 `, fromEmail, filename, toEmail),
+		HTML: html,
 	}
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal email payload: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+e.ResendAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("resend API error (%d): %s", resp.StatusCode, string(respBody))
+	if err := e.sendEmail(payload); err != nil {
+		return err
 	}
 
 	log.Printf("[EMAIL] Share invite sent to %s (from %s, file: %s)", toEmail, fromEmail, filename)
@@ -168,30 +172,24 @@ func (e *EmailService) SendAdminNotification(adminEmail, userEmail, userName str
 		return nil
 	}
 
-	payload := map[string]string{
-		"from":    fmt.Sprintf("pidrive <%s>", e.FromEmail),
-		"to":      adminEmail,
-		"subject": fmt.Sprintf("New pidrive signup: %s", userEmail),
-		"text":    fmt.Sprintf("%s (\"%s\") just verified their pidrive account.", userEmail, userName),
+	// Render HTML template
+	html, err := templates.RenderAdminNotification(userEmail, userName)
+	if err != nil {
+		log.Printf("[EMAIL] Failed to render admin notification template: %v", err)
+		html = ""
 	}
 
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
+	payload := emailPayload{
+		From:    fmt.Sprintf("pidrive <%s>", e.FromEmail),
+		To:      adminEmail,
+		Subject: fmt.Sprintf("New pidrive signup: %s", userEmail),
+		Text:    fmt.Sprintf("%s (\"%s\") just verified their pidrive account.", userEmail, userName),
+		HTML:    html,
 	}
 
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
-	if err != nil {
+	if err := e.sendEmail(payload); err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+e.ResendAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 
 	log.Printf("[EMAIL] Admin notified of new signup: %s", userEmail)
 	return nil

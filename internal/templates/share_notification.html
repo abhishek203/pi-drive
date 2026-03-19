@@ -1,0 +1,17 @@
+{{template "base" .}}
+
+{{define "title"}}{{.FromEmail}} shared a file with you{{end}}
+
+{{define "content"}}
+<h1>File shared with you</h1>
+<p><strong>{{.FromEmail}}</strong> shared a file with you:</p>
+
+<div class="code-block">{{.Filename}}</div>
+
+<p>Access it in your drive:</p>
+
+<div class="code-block">pidrive mount
+cat /drive/shared/{{.FromEmail}}/{{.Filename}}</div>
+
+<p class="muted">Or run <code>pidrive shared</code> to see all files shared with you.</p>
+{{end}}

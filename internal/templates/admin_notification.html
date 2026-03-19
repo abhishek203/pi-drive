@@ -1,0 +1,11 @@
+{{template "base" .}}
+
+{{define "title"}}New signup: {{.UserEmail}}{{end}}
+
+{{define "content"}}
+<h1>New signup</h1>
+<p>A new user just verified their pidrive account:</p>
+
+<div class="code-block"><strong>Email:</strong> {{.UserEmail}}
+<strong>Name:</strong> {{.UserName}}</div>
+{{end}}

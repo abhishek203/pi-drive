@@ -1,0 +1,14 @@
+{{template "base" .}}
+
+{{define "title"}}Verify your pidrive account{{end}}
+
+{{define "content"}}
+<h1>Verify your email</h1>
+<p>Enter this code to complete your pidrive registration:</p>
+
+<div class="verification-code">{{.Code}}</div>
+
+<p class="muted">This code expires in 15 minutes.</p>
+
+<p class="muted">If you didn't request this code, you can safely ignore this email.</p>
+{{end}}

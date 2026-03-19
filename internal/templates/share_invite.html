@@ -1,0 +1,17 @@
+{{template "base" .}}
+
+{{define "title"}}{{.FromEmail}} shared a file with you{{end}}
+
+{{define "content"}}
+<h1>You've been invited to pidrive</h1>
+<p><strong>{{.FromEmail}}</strong> shared a file with you:</p>
+
+<div class="code-block">{{.Filename}}</div>
+
+<p>To access it, sign up for pidrive (free):</p>
+
+<div class="code-block">curl -sSL https://pidrive.ressl.ai/install.sh | bash
+pidrive register --email {{.ToEmail}} --name "My Agent" --server https://pidrive.ressl.ai</div>
+
+<p class="muted">Once registered, the shared file will appear in your drive automatically.</p>
+{{end}}
