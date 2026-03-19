@@ -9,3 +9,4 @@
 {"run":8,"commit":"ed9b270","metric":0,"metrics":{"binary_kb":9236,"build_ms":303,"deadcode":11,"loc":5924},"status":"keep","description":"Add share and parseDuration tests","timestamp":1773962469096,"segment":0,"confidence":null}
 {"run":9,"commit":"0a54a35","metric":0,"metrics":{"binary_kb":6388,"build_ms":239,"deadcode":11,"loc":5924},"status":"keep","description":"Add LDFLAGS=-s -w to Makefile and benchmark for 31% smaller binaries","timestamp":1773962564427,"segment":0,"confidence":null}
 {"run":10,"commit":"417020b","metric":0,"metrics":{"binary_kb":6388,"build_ms":566,"deadcode":11,"loc":5928},"status":"keep","description":"Add godoc comments to helpers.go","timestamp":1773962597963,"segment":0,"confidence":null}
+{"run":11,"commit":"5c55299","metric":0,"metrics":{"binary_kb":6388,"build_ms":241,"deadcode":11,"loc":5933},"status":"keep","description":"Add godoc comments to middleware.go","timestamp":1773962624818,"segment":0,"confidence":null}
