@@ -21,8 +21,8 @@ type Credentials struct {
 }
 
 type Client struct {
-	creds  *Credentials
-	http   *http.Client
+	creds *Credentials
+	http  *http.Client
 }
 
 func credentialsPath() string {

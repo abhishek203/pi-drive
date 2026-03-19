@@ -15,8 +15,9 @@ import (
 )
 
 // agentFS is a virtual filesystem that shows:
-//   /my/       → agent's own files (read/write)
-//   /shared/   → files shared with this agent (read-only, from other agents' dirs)
+//
+//	/my/       → agent's own files (read/write)
+//	/shared/   → files shared with this agent (read-only, from other agents' dirs)
 type agentFS struct {
 	agentID      string
 	mountPath    string
@@ -237,10 +238,10 @@ type virtualDir struct {
 	pos     int
 }
 
-func (d *virtualDir) Close() error                             { return nil }
-func (d *virtualDir) Read([]byte) (int, error)                 { return 0, fmt.Errorf("is a directory") }
-func (d *virtualDir) Write([]byte) (int, error)                { return 0, fmt.Errorf("is a directory") }
-func (d *virtualDir) Seek(int64, int) (int64, error)           { return 0, fmt.Errorf("is a directory") }
+func (d *virtualDir) Close() error                   { return nil }
+func (d *virtualDir) Read([]byte) (int, error)       { return 0, fmt.Errorf("is a directory") }
+func (d *virtualDir) Write([]byte) (int, error)      { return 0, fmt.Errorf("is a directory") }
+func (d *virtualDir) Seek(int64, int) (int64, error) { return 0, fmt.Errorf("is a directory") }
 
 func (d *virtualDir) Readdir(count int) ([]os.FileInfo, error) {
 	if d.pos >= len(d.entries) {
@@ -270,9 +271,9 @@ type dirInfo struct {
 	name string
 }
 
-func (d *dirInfo) Name() string      { return d.name }
-func (d *dirInfo) Size() int64       { return 0 }
-func (d *dirInfo) Mode() os.FileMode { return os.ModeDir | 0755 }
+func (d *dirInfo) Name() string       { return d.name }
+func (d *dirInfo) Size() int64        { return 0 }
+func (d *dirInfo) Mode() os.FileMode  { return os.ModeDir | 0755 }
 func (d *dirInfo) ModTime() time.Time { return time.Now() }
-func (d *dirInfo) IsDir() bool       { return true }
-func (d *dirInfo) Sys() interface{}  { return nil }
+func (d *dirInfo) IsDir() bool        { return true }
+func (d *dirInfo) Sys() interface{}   { return nil }

@@ -134,10 +134,10 @@ type fakeInfo struct {
 	name string
 }
 
-func fakeFileInfo(name string) os.FileInfo    { return &fakeInfo{name: name} }
-func (f *fakeInfo) Name() string              { return f.name }
-func (f *fakeInfo) Size() int64               { return 0 }
-func (f *fakeInfo) Mode() os.FileMode         { return 0644 }
-func (f *fakeInfo) ModTime() time.Time        { return time.Time{} }
-func (f *fakeInfo) IsDir() bool               { return false }
-func (f *fakeInfo) Sys() interface{}          { return nil }
+func fakeFileInfo(name string) os.FileInfo { return &fakeInfo{name: name} }
+func (f *fakeInfo) Name() string           { return f.name }
+func (f *fakeInfo) Size() int64            { return 0 }
+func (f *fakeInfo) Mode() os.FileMode      { return 0644 }
+func (f *fakeInfo) ModTime() time.Time     { return time.Time{} }
+func (f *fakeInfo) IsDir() bool            { return false }
+func (f *fakeInfo) Sys() interface{}       { return nil }

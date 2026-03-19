@@ -23,13 +23,13 @@ type Config struct {
 	JuiceFSCacheMB   int
 	JuiceFSTrashDays int
 
-	SFTPPort     string
-	HostKeyPath  string
+	SFTPPort    string
+	HostKeyPath string
 
 	ResendAPIKey string
 	FromEmail    string
 
-	StripeSecretKey    string
+	StripeSecretKey     string
 	StripeWebhookSecret string
 }
 
@@ -58,7 +58,7 @@ func Load() *Config {
 		ResendAPIKey: os.Getenv("PIDRIVE_RESEND_API_KEY"),
 		FromEmail:    envOr("PIDRIVE_FROM_EMAIL", "noreply@agents.ressl.ai"),
 
-		StripeSecretKey:    os.Getenv("PIDRIVE_STRIPE_SECRET_KEY"),
+		StripeSecretKey:     os.Getenv("PIDRIVE_STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: os.Getenv("PIDRIVE_STRIPE_WEBHOOK_SECRET"),
 	}
 }

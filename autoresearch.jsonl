@@ -1,2 +1,3 @@
 {"type":"config","name":"PiDrive Codebase Quality Optimization","metricName":"issue_count","metricUnit":"","bestDirection":"lower"}
 {"run":1,"commit":"db6cb34","metric":1,"metrics":{"binary_kb":9236,"build_ms":307},"status":"keep","description":"Baseline: 1 static analysis issue, 9236KB binary, 307ms build","timestamp":1773962069824,"segment":0,"confidence":null}
+{"run":2,"commit":"f3e0a6b","metric":0,"metrics":{"binary_kb":9236,"build_ms":316},"status":"keep","description":"Fix unused err in indexer.go - proper error logging for db.Exec","timestamp":1773962093663,"segment":0,"confidence":null}

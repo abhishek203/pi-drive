@@ -13,16 +13,16 @@ import (
 )
 
 type Agent struct {
-	ID                   string    `json:"id"`
-	Email                string    `json:"email"`
-	Name                 string    `json:"name"`
-	Plan                 string    `json:"plan"`
-	QuotaBytes           int64     `json:"quota_bytes"`
-	UsedBytes            int64     `json:"used_bytes"`
-	CreatedAt            time.Time `json:"created_at"`
-	Verified             bool      `json:"verified"`
-	VerificationCode     *string   `json:"-"`
-	VerificationExpires  *time.Time `json:"-"`
+	ID                  string     `json:"id"`
+	Email               string     `json:"email"`
+	Name                string     `json:"name"`
+	Plan                string     `json:"plan"`
+	QuotaBytes          int64      `json:"quota_bytes"`
+	UsedBytes           int64      `json:"used_bytes"`
+	CreatedAt           time.Time  `json:"created_at"`
+	Verified            bool       `json:"verified"`
+	VerificationCode    *string    `json:"-"`
+	VerificationExpires *time.Time `json:"-"`
 }
 
 type AuthService struct {
