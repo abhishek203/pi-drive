@@ -3,7 +3,6 @@ module github.com/pidrive/pidrive
 go 1.25.5
 
 require (
-	github.com/BurntSushi/toml v1.6.0
 	github.com/lib/pq v1.11.2
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/net v0.52.0

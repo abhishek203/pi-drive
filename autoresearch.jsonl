@@ -21,3 +21,4 @@
 {"run":19,"commit":"6b152cb","metric":11,"metrics":{},"status":"keep","description":"Baseline for deadcode-focused session: 11 unreachable funcs, issue_count 0, 6388KB binary, 682ms build","timestamp":1774503309870,"segment":1,"confidence":null}
 {"run":20,"commit":"180b644","metric":0,"metrics":{},"status":"keep","description":"Remove unreachable WebDAV invalidation helper, unused auth/billing methods, and obsolete mount service package to cut deadcode 11→0 while preserving issue_count 0","timestamp":1774503388801,"segment":1,"confidence":null}
 {"type":"config","name":"PiDrive CLI Binary Size Reduction","metricName":"binary_kb","metricUnit":"kb","bestDirection":"lower"}
+{"run":21,"commit":"7778181","metric":6388,"metrics":{},"status":"keep","description":"Baseline for binary-size session: stripped CLI binary 6388KB, build 546ms, issue_count 0, deadcode 0","timestamp":1774503457352,"segment":2,"confidence":null}

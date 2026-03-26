@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -8,16 +9,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
 	"runtime"
-
-	"github.com/BurntSushi/toml"
+	"strconv"
+	"strings"
 )
 
 type Credentials struct {
-	APIKey string `toml:"api_key"`
-	Server string `toml:"server"`
-	Mount  string `toml:"mount_path"`
+	APIKey string
+	Server string
+	Mount  string
 }
 
 type Client struct {
@@ -30,6 +30,53 @@ func credentialsPath() string {
 	return filepath.Join(home, ".pidrive", "credentials")
 }
 
+func parseCredentials(data []byte) (*Credentials, error) {
+	creds := &Credentials{}
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid line %q", line)
+		}
+
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		unquoted, err := strconv.Unquote(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %s: %w", key, err)
+		}
+
+		switch key {
+		case "api_key":
+			creds.APIKey = unquoted
+		case "server":
+			creds.Server = unquoted
+		case "mount_path":
+			creds.Mount = unquoted
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return creds, nil
+}
+
+func encodeCredentials(creds *Credentials) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "api_key = %s\n", strconv.Quote(creds.APIKey))
+	fmt.Fprintf(&b, "server = %s\n", strconv.Quote(creds.Server))
+	fmt.Fprintf(&b, "mount_path = %s\n", strconv.Quote(creds.Mount))
+	return []byte(b.String())
+}
+
 func LoadCredentials() (*Credentials, error) {
 	path := credentialsPath()
 	data, err := os.ReadFile(path)
@@ -37,24 +84,17 @@ func LoadCredentials() (*Credentials, error) {
 		return nil, fmt.Errorf("not logged in. Run 'pidrive register' or 'pidrive login' first")
 	}
 
-	var creds Credentials
-	if err := toml.Unmarshal(data, &creds); err != nil {
+	creds, err := parseCredentials(data)
+	if err != nil {
 		return nil, fmt.Errorf("invalid credentials file: %w", err)
 	}
-	return &creds, nil
+	return creds, nil
 }
 
 func SaveCredentials(creds *Credentials) error {
 	path := credentialsPath()
 	os.MkdirAll(filepath.Dir(path), 0700)
-
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return toml.NewEncoder(f).Encode(creds)
+	return os.WriteFile(path, encodeCredentials(creds), 0600)
 }
 
 func NewClient() (*Client, error) {

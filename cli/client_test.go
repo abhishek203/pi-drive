@@ -21,6 +21,31 @@ func TestCredentialsPath(t *testing.T) {
 	}
 }
 
+func TestParseCredentials(t *testing.T) {
+	creds, err := parseCredentials([]byte("api_key = \"pk_test\"\nserver = \"https://example.com\"\nmount_path = \"/tmp/drive\"\n"))
+	if err != nil {
+		t.Fatalf("parseCredentials() error = %v", err)
+	}
+
+	if creds.APIKey != "pk_test" || creds.Server != "https://example.com" || creds.Mount != "/tmp/drive" {
+		t.Fatalf("parseCredentials() = %#v", creds)
+	}
+}
+
+func TestEncodeCredentials(t *testing.T) {
+	creds := &Credentials{
+		APIKey: "pk_test",
+		Server: "https://example.com",
+		Mount:  "/tmp/drive",
+	}
+
+	got := string(encodeCredentials(creds))
+	want := "api_key = \"pk_test\"\nserver = \"https://example.com\"\nmount_path = \"/tmp/drive\"\n"
+	if got != want {
+		t.Fatalf("encodeCredentials() = %q, want %q", got, want)
+	}
+}
+
 func TestClient_MountPath(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -52,7 +77,6 @@ func TestClient_MountPath(t *testing.T) {
 					t.Errorf("MountPath() = %q, want %q", got, tt.expected)
 				}
 			} else {
-				// Check OS-specific defaults
 				if runtime.GOOS == "darwin" {
 					home, _ := os.UserHomeDir()
 					expected := filepath.Join(home, "drive")
