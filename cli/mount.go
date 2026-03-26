@@ -6,54 +6,43 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
-var mountCmd = &cobra.Command{
-	Use:   "mount",
-	Short: "Mount your drive",
-	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
+func runMount(args []string) {
+	fs := newFlagSet("mount")
+	parseFlags(fs, args)
+	if len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive mount")
+		os.Exit(1)
+	}
+
+	client, err := NewClient()
+	if err != nil {
+		fatalf("%v", err)
+	}
+
+	fmt.Println("Connecting to server...")
+	if _, err := client.Post("/api/mount", nil); err != nil {
+		fatalf("%v", err)
+	}
+
+	drivePath := client.MountPath()
+	os.MkdirAll(drivePath, 0755)
+	if isMounted(drivePath) {
+		fmt.Printf("✓ Already mounted at %s\n", drivePath)
+		os.Exit(0)
+	}
+
+	fmt.Printf("Mounting at %s...\n", drivePath)
+	if runtime.GOOS == "darwin" {
+		if _, err := exec.LookPath("expect"); err != nil {
+			fmt.Fprintln(os.Stderr, "✗ 'expect' is not installed")
+			fmt.Fprintln(os.Stderr, "  Install: brew install expect")
 			os.Exit(1)
 		}
 
-		// Call mount API to ensure agent dirs exist
-		fmt.Println("Connecting to server...")
-		_, err = client.Post("/api/mount", nil)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
-		}
-
-		drivePath := client.MountPath()
-		os.MkdirAll(drivePath, 0755)
-
-		// Check if already mounted
-		if isMounted(drivePath) {
-			fmt.Printf("✓ Already mounted at %s\n", drivePath)
-			os.Exit(0)
-		}
-
-		// WebDAV URL
-		webdavURL := strings.Replace(client.Server(), "https://", "https://pidrive:"+client.creds.APIKey+"@", 1)
-		webdavURL = strings.Replace(webdavURL, "http://", "http://pidrive:"+client.creds.APIKey+"@", 1)
-		webdavURL += "/webdav"
-
-		fmt.Printf("Mounting at %s...\n", drivePath)
-
-		if runtime.GOOS == "darwin" {
-			// macOS: use expect to automate mount_webdav -i
-			if _, err := exec.LookPath("expect"); err != nil {
-				fmt.Fprintln(os.Stderr, "✗ 'expect' is not installed")
-				fmt.Fprintln(os.Stderr, "  Install: brew install expect")
-				os.Exit(1)
-			}
-
-			serverWebDAV := client.Server() + "/webdav/"
-			expectScript := fmt.Sprintf(`spawn mount_webdav -i %s %s
+		serverWebDAV := client.Server() + "/webdav/"
+		expectScript := fmt.Sprintf(`spawn mount_webdav -i %s %s
 expect "Username:"
 send "pidrive\r"
 expect "Password:"
@@ -61,138 +50,131 @@ send "%s\r"
 expect eof
 `, serverWebDAV, drivePath, client.creds.APIKey)
 
-			mountCmd := exec.Command("expect", "-c", expectScript)
-			mountCmd.Stderr = os.Stderr
-			mountCmd.Stdout = os.Stdout
+		mountCmd := exec.Command("expect", "-c", expectScript)
+		mountCmd.Stderr = os.Stderr
+		mountCmd.Stdout = os.Stdout
+		if err := mountCmd.Run(); err != nil {
+			fatalf("Mount failed: %v", err)
+		}
+	} else if runtime.GOOS == "linux" {
+		if _, err := exec.LookPath("mount.davfs"); err != nil {
+			fmt.Fprintln(os.Stderr, "✗ davfs2 is not installed")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "  Install:")
+			fmt.Fprintln(os.Stderr, "    sudo apt install davfs2")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "  Then run 'pidrive mount' again.")
+			os.Exit(1)
+		}
 
-			if err := mountCmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "✗ Mount failed: %v\n", err)
-				os.Exit(1)
-			}
-		} else if runtime.GOOS == "linux" {
-			// Linux: check for davfs2
-			if _, err := exec.LookPath("mount.davfs"); err != nil {
-				fmt.Fprintln(os.Stderr, "✗ davfs2 is not installed")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Install:")
-				fmt.Fprintln(os.Stderr, "    sudo apt install davfs2")
-				fmt.Fprintln(os.Stderr, "")
-				fmt.Fprintln(os.Stderr, "  Then run 'pidrive mount' again.")
-				os.Exit(1)
-			}
+		home, _ := os.UserHomeDir()
+		davfsDir := home + "/.davfs2"
+		os.MkdirAll(davfsDir, 0700)
+		secretsFile := davfsDir + "/secrets"
+		serverWebDAV := client.Server() + "/webdav"
 
-			// Write credentials to davfs2 secrets file
-			home, _ := os.UserHomeDir()
-			davfsDir := home + "/.davfs2"
-			os.MkdirAll(davfsDir, 0700)
-			secretsFile := davfsDir + "/secrets"
-			serverWebDAV := client.Server() + "/webdav"
-
-			// Read existing secrets, replace or append
-			existing, _ := os.ReadFile(secretsFile)
-			lines := strings.Split(string(existing), "\n")
-			var newLines []string
-			found := false
-			for _, line := range lines {
-				if strings.HasPrefix(line, serverWebDAV) {
-					newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
-					found = true
-				} else {
-					newLines = append(newLines, line)
-				}
-			}
-			if !found {
+		existing, _ := os.ReadFile(secretsFile)
+		lines := strings.Split(string(existing), "\n")
+		var newLines []string
+		found := false
+		for _, line := range lines {
+			if strings.HasPrefix(line, serverWebDAV) {
 				newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
+				found = true
+			} else {
+				newLines = append(newLines, line)
 			}
-			os.WriteFile(secretsFile, []byte(strings.Join(newLines, "\n")), 0600)
-
-			mountExec := exec.Command("sudo", "mount", "-t", "davfs", serverWebDAV, drivePath)
-			mountExec.Stderr = os.Stderr
-			mountExec.Stdout = os.Stdout
-			mountExec.Stdin = os.Stdin
-
-			if err := mountExec.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "✗ Mount failed: %v\n", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Fprintln(os.Stderr, "✗ Unsupported OS")
-			os.Exit(1)
 		}
+		if !found {
+			newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
+		}
+		os.WriteFile(secretsFile, []byte(strings.Join(newLines, "\n")), 0600)
 
-		fmt.Println()
-		fmt.Println("✓ Drive mounted!")
-		fmt.Printf("  Your files:    %s/my/\n", drivePath)
-		fmt.Printf("  Shared with you: %s/shared/\n", drivePath)
-		fmt.Println()
-		fmt.Println("Try:")
-		fmt.Printf("  ls %s/my/\n", drivePath)
-		fmt.Printf("  echo 'hello' > %s/my/test.txt\n", drivePath)
-	},
+		mountExec := exec.Command("sudo", "mount", "-t", "davfs", serverWebDAV, drivePath)
+		mountExec.Stderr = os.Stderr
+		mountExec.Stdout = os.Stdout
+		mountExec.Stdin = os.Stdin
+		if err := mountExec.Run(); err != nil {
+			fatalf("Mount failed: %v", err)
+		}
+	} else {
+		fatalf("Unsupported OS")
+	}
+
+	fmt.Println()
+	fmt.Println("✓ Drive mounted!")
+	fmt.Printf("  Your files:    %s/my/\n", drivePath)
+	fmt.Printf("  Shared with you: %s/shared/\n", drivePath)
+	fmt.Println()
+	fmt.Println("Try:")
+	fmt.Printf("  ls %s/my/\n", drivePath)
+	fmt.Printf("  echo 'hello' > %s/my/test.txt\n", drivePath)
 }
 
-var unmountCmd = &cobra.Command{
-	Use:   "unmount",
-	Short: "Unmount your drive",
-	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
-		}
+func runUnmount(args []string) {
+	fs := newFlagSet("unmount")
+	parseFlags(fs, args)
+	if len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive unmount")
+		os.Exit(1)
+	}
 
-		drivePath := client.MountPath()
-		fmt.Printf("Unmounting %s...\n", drivePath)
+	client, err := NewClient()
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-		var unmountErr error
-		if runtime.GOOS == "linux" {
-			unmountErr = exec.Command("sudo", "umount", drivePath).Run()
-		} else {
-			unmountErr = exec.Command("umount", drivePath).Run()
-		}
+	drivePath := client.MountPath()
+	fmt.Printf("Unmounting %s...\n", drivePath)
 
-		if unmountErr != nil {
-			fmt.Fprintf(os.Stderr, "✗ Unmount failed: %v\n", unmountErr)
-			os.Exit(1)
-		}
+	var unmountErr error
+	if runtime.GOOS == "linux" {
+		unmountErr = exec.Command("sudo", "umount", drivePath).Run()
+	} else {
+		unmountErr = exec.Command("umount", drivePath).Run()
+	}
+	if unmountErr != nil {
+		fatalf("Unmount failed: %v", unmountErr)
+	}
 
-		client.Post("/api/unmount", nil)
-		fmt.Println("✓ Drive unmounted")
-	},
+	client.Post("/api/unmount", nil)
+	fmt.Println("✓ Drive unmounted")
 }
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show mount and connection status",
-	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
-		}
+func runStatus(args []string) {
+	fs := newFlagSet("status")
+	parseFlags(fs, args)
+	if len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive status")
+		os.Exit(1)
+	}
 
-		drivePath := client.MountPath()
+	client, err := NewClient()
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-		if isMounted(drivePath) {
-			fmt.Printf("Mount:   ✓ %s\n", drivePath)
-		} else {
-			fmt.Printf("Mount:   ✗ not mounted at %s\n", drivePath)
-		}
+	drivePath := client.MountPath()
+	if isMounted(drivePath) {
+		fmt.Printf("Mount:   ✓ %s\n", drivePath)
+	} else {
+		fmt.Printf("Mount:   ✗ not mounted at %s\n", drivePath)
+	}
 
-		result, err := client.Get("/api/whoami")
-		if err != nil {
-			fmt.Printf("Server:  ✗ %v\n", err)
-		} else {
-			email, _ := result["email"].(string)
-			plan, _ := result["plan"].(string)
-			usedBytes, _ := result["used_bytes"].(float64)
-			quotaBytes, _ := result["quota_bytes"].(float64)
-			fmt.Printf("Server:  ✓ %s\n", client.Server())
-			fmt.Printf("Agent:   %s\n", email)
-			fmt.Printf("Plan:    %s\n", plan)
-			fmt.Printf("Storage: %s / %s\n", formatBytes(int64(usedBytes)), formatBytes(int64(quotaBytes)))
-		}
-	},
+	result, err := client.Get("/api/whoami")
+	if err != nil {
+		fmt.Printf("Server:  ✗ %v\n", err)
+		return
+	}
+
+	email, _ := result["email"].(string)
+	plan, _ := result["plan"].(string)
+	usedBytes, _ := result["used_bytes"].(float64)
+	quotaBytes, _ := result["quota_bytes"].(float64)
+	fmt.Printf("Server:  ✓ %s\n", client.Server())
+	fmt.Printf("Agent:   %s\n", email)
+	fmt.Printf("Plan:    %s\n", plan)
+	fmt.Printf("Storage: %s / %s\n", formatBytes(int64(usedBytes)), formatBytes(int64(quotaBytes)))
 }
 
 func isMounted(path string) bool {

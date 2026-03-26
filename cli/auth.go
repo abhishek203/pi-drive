@@ -5,196 +5,149 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
-var registerCmd = &cobra.Command{
-	Use:   "register",
-	Short: "Register a new agent account",
-	Run: func(cmd *cobra.Command, args []string) {
-		email, _ := cmd.Flags().GetString("email")
-		name, _ := cmd.Flags().GetString("name")
-		server, _ := cmd.Flags().GetString("server")
+func runRegister(args []string) {
+	fs := newFlagSet("register")
+	email := fs.String("email", "", "Email address")
+	name := fs.String("name", "", "Agent name")
+	server := fs.String("server", "", "pidrive server URL")
+	parseFlags(fs, args)
 
-		if email == "" || name == "" || server == "" {
-			fmt.Println("Usage: pidrive register --email <email> --name <name> --server <url>")
-			os.Exit(1)
-		}
+	if *email == "" || *name == "" || *server == "" || len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive register --email <email> --name <name> --server <url>")
+		os.Exit(1)
+	}
 
-		client := NewClientWithServer(server)
-		result, err := client.Post("/api/register", map[string]string{
-			"email": email,
-			"name":  name,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Registration failed: %v\n", err)
-			os.Exit(1)
-		}
+	client := NewClientWithServer(*server)
+	result, err := client.Post("/api/register", map[string]string{
+		"email": *email,
+		"name":  *name,
+	})
+	if err != nil {
+		fatalf("Registration failed: %v", err)
+	}
 
-		apiKey, _ := result["api_key"].(string)
+	apiKey, _ := result["api_key"].(string)
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: *server, Mount: "/drive"}); err != nil {
+		fatalf("Failed to save credentials: %v", err)
+	}
 
-		// Save credentials
-		if err := SaveCredentials(&Credentials{
-			APIKey: apiKey,
-			Server: server,
-			Mount:  "/drive",
-		}); err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Failed to save credentials: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("✓ Registered successfully!")
-		fmt.Printf("  API Key: %s\n", apiKey)
-		fmt.Printf("  Saved to: %s\n", credentialsPath())
-		fmt.Println()
-		fmt.Println("Check your email for the verification code, then run:")
-		fmt.Printf("  pidrive verify --email %s --code <code>\n", email)
-	},
+	fmt.Println("✓ Registered successfully!")
+	fmt.Printf("  API Key: %s\n", apiKey)
+	fmt.Printf("  Saved to: %s\n", credentialsPath())
+	fmt.Println()
+	fmt.Println("Check your email for the verification code, then run:")
+	fmt.Printf("  pidrive verify --email %s --code <code>\n", *email)
 }
 
-var loginCmd = &cobra.Command{
-	Use:   "login",
-	Short: "Login to an existing account",
-	Run: func(cmd *cobra.Command, args []string) {
-		email, _ := cmd.Flags().GetString("email")
-		server, _ := cmd.Flags().GetString("server")
+func runLogin(args []string) {
+	fs := newFlagSet("login")
+	email := fs.String("email", "", "Email address")
+	server := fs.String("server", "", "pidrive server URL")
+	parseFlags(fs, args)
 
-		if email == "" {
-			fmt.Println("Usage: pidrive login --email <email> [--server <url>]")
-			os.Exit(1)
-		}
+	if *email == "" || len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive login --email <email> [--server <url>]")
+		os.Exit(1)
+	}
 
-		// Try to load existing server from credentials
-		if server == "" {
-			creds, err := LoadCredentials()
-			if err == nil {
-				server = creds.Server
-			}
-		}
-		if server == "" {
-			fmt.Println("--server is required (first time login)")
-			os.Exit(1)
-		}
-
-		client := NewClientWithServer(server)
-		_, err := client.Post("/api/login", map[string]string{
-			"email": email,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Login failed: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("✓ Verification code sent to", email)
-		fmt.Println()
-
-		// Prompt for code
-		fmt.Print("Enter verification code: ")
-		reader := bufio.NewReader(os.Stdin)
-		code, _ := reader.ReadString('\n')
-		code = strings.TrimSpace(code)
-
-		result, err := client.Post("/api/verify", map[string]string{
-			"email": email,
-			"code":  code,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Verification failed: %v\n", err)
-			os.Exit(1)
-		}
-
-		apiKey, _ := result["api_key"].(string)
-		if err := SaveCredentials(&Credentials{
-			APIKey: apiKey,
-			Server: server,
-			Mount:  "/drive",
-		}); err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Failed to save credentials: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("✓ Logged in successfully!")
-	},
-}
-
-var verifyCmd = &cobra.Command{
-	Use:   "verify",
-	Short: "Verify your account with the code from email",
-	Run: func(cmd *cobra.Command, args []string) {
-		email, _ := cmd.Flags().GetString("email")
-		code, _ := cmd.Flags().GetString("code")
-
-		if email == "" || code == "" {
-			fmt.Println("Usage: pidrive verify --email <email> --code <code>")
-			os.Exit(1)
-		}
-
-		// Load server from credentials
+	if *server == "" {
 		creds, err := LoadCredentials()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
+		if err == nil {
+			*server = creds.Server
 		}
+	}
+	if *server == "" {
+		fmt.Println("--server is required (first time login)")
+		os.Exit(1)
+	}
 
-		client := NewClientWithServer(creds.Server)
-		result, err := client.Post("/api/verify", map[string]string{
-			"email": email,
-			"code":  code,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ Verification failed: %v\n", err)
-			os.Exit(1)
-		}
+	client := NewClientWithServer(*server)
+	if _, err := client.Post("/api/login", map[string]string{"email": *email}); err != nil {
+		fatalf("Login failed: %v", err)
+	}
 
-		apiKey, _ := result["api_key"].(string)
-		creds.APIKey = apiKey
-		SaveCredentials(creds)
+	fmt.Println("✓ Verification code sent to", *email)
+	fmt.Println()
+	fmt.Print("Enter verification code: ")
+	reader := bufio.NewReader(os.Stdin)
+	code, _ := reader.ReadString('\n')
+	code = strings.TrimSpace(code)
 
-		fmt.Println("✓ Account verified!")
-		fmt.Println()
-		fmt.Println("Next: pidrive mount")
-	},
+	result, err := client.Post("/api/verify", map[string]string{"email": *email, "code": code})
+	if err != nil {
+		fatalf("Verification failed: %v", err)
+	}
+
+	apiKey, _ := result["api_key"].(string)
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: *server, Mount: "/drive"}); err != nil {
+		fatalf("Failed to save credentials: %v", err)
+	}
+
+	fmt.Println("✓ Logged in successfully!")
 }
 
-var whoamiCmd = &cobra.Command{
-	Use:   "whoami",
-	Short: "Show current agent info",
-	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
-		}
+func runVerify(args []string) {
+	fs := newFlagSet("verify")
+	email := fs.String("email", "", "Email address")
+	code := fs.String("code", "", "Verification code")
+	parseFlags(fs, args)
 
-		result, err := client.Get("/api/me")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %v\n", err)
-			os.Exit(1)
-		}
+	if *email == "" || *code == "" || len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive verify --email <email> --code <code>")
+		os.Exit(1)
+	}
 
-		email, _ := result["email"].(string)
-		name, _ := result["name"].(string)
-		plan, _ := result["plan"].(string)
-		usedBytes, _ := result["used_bytes"].(float64)
-		quotaBytes, _ := result["quota_bytes"].(float64)
+	creds, err := LoadCredentials()
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-		fmt.Printf("%s (%s)\n", email, name)
-		fmt.Printf("Plan: %s (%s / %s)\n", plan, formatBytes(int64(usedBytes)), formatBytes(int64(quotaBytes)))
-		fmt.Printf("Server: %s\n", client.Server())
-	},
+	client := NewClientWithServer(creds.Server)
+	result, err := client.Post("/api/verify", map[string]string{"email": *email, "code": *code})
+	if err != nil {
+		fatalf("Verification failed: %v", err)
+	}
+
+	apiKey, _ := result["api_key"].(string)
+	creds.APIKey = apiKey
+	if err := SaveCredentials(creds); err != nil {
+		fatalf("Failed to save credentials: %v", err)
+	}
+
+	fmt.Println("✓ Account verified!")
+	fmt.Println()
+	fmt.Println("Next: pidrive mount")
 }
 
-func init() {
-	registerCmd.Flags().String("email", "", "Email address")
-	registerCmd.Flags().String("name", "", "Agent name")
-	registerCmd.Flags().String("server", "", "pidrive server URL")
+func runWhoami(args []string) {
+	fs := newFlagSet("whoami")
+	parseFlags(fs, args)
+	if len(fs.Args()) != 0 {
+		fmt.Println("Usage: pidrive whoami")
+		os.Exit(1)
+	}
 
-	loginCmd.Flags().String("email", "", "Email address")
-	loginCmd.Flags().String("server", "", "pidrive server URL")
+	client, err := NewClient()
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-	verifyCmd.Flags().String("email", "", "Email address")
-	verifyCmd.Flags().String("code", "", "Verification code")
+	result, err := client.Get("/api/me")
+	if err != nil {
+		fatalf("%v", err)
+	}
+
+	email, _ := result["email"].(string)
+	name, _ := result["name"].(string)
+	plan, _ := result["plan"].(string)
+	usedBytes, _ := result["used_bytes"].(float64)
+	quotaBytes, _ := result["quota_bytes"].(float64)
+
+	fmt.Printf("%s (%s)\n", email, name)
+	fmt.Printf("Plan: %s (%s / %s)\n", plan, formatBytes(int64(usedBytes)), formatBytes(int64(quotaBytes)))
+	fmt.Printf("Server: %s\n", client.Server())
 }
 
 func formatBytes(b int64) string {

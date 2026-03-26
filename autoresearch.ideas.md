@@ -8,11 +8,9 @@
 - [x] Added unit tests for auth, share, config, search, api packages
 - [x] Added godoc comments to helpers.go and middleware.go
 - [x] Removed unreachable WebDAV, auth, billing, and mount code paths
+- [x] Replaced Cobra CLI framework with stdlib flag parsing for a smaller binary
 
 ## Future Optimization Opportunities
-
-### Dead Code Removal (Conservative)
-- Review remaining deadcode periodically as new features land
 
 ### Performance Improvements
 - Add database connection pooling configuration
