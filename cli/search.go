@@ -7,13 +7,11 @@ import (
 )
 
 func runSearch(args []string) {
-	fs := newFlagSet("search")
-	fileType := fs.String("type", "", "Filter by file extension (e.g. csv,txt)")
-	modified := fs.String("modified", "", "Filter by modification time (e.g. 7d, 24h)")
-	myOnly := fs.Bool("my-only", false, "Search only your own files")
-	sharedOnly := fs.Bool("shared-only", false, "Search only shared files")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 1 {
+	parsed, err := parseCommandArgs(args, map[string]flagType{"type": stringFlag, "modified": stringFlag, "my-only": boolFlag, "shared-only": boolFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 1 {
 		fmt.Println("Usage: pidrive search <query> [--type ext] [--modified dur] [--my-only] [--shared-only]")
 		os.Exit(1)
 	}
@@ -23,19 +21,19 @@ func runSearch(args []string) {
 		fatalf("%v", err)
 	}
 
-	query := fs.Args()[0]
+	query := parsed.args[0]
 	params := url.Values{}
 	params.Set("q", query)
-	if *fileType != "" {
-		params.Set("type", *fileType)
+	if v := parsed.String("type", ""); v != "" {
+		params.Set("type", v)
 	}
-	if *modified != "" {
-		params.Set("modified", *modified)
+	if v := parsed.String("modified", ""); v != "" {
+		params.Set("modified", v)
 	}
-	if *myOnly {
+	if parsed.Bool("my-only") {
 		params.Set("my_only", "true")
 	}
-	if *sharedOnly {
+	if parsed.Bool("shared-only") {
 		params.Set("shared_only", "true")
 	}
 

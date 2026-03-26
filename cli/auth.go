@@ -8,28 +8,27 @@ import (
 )
 
 func runRegister(args []string) {
-	fs := newFlagSet("register")
-	email := fs.String("email", "", "Email address")
-	name := fs.String("name", "", "Agent name")
-	server := fs.String("server", "", "pidrive server URL")
-	parseFlags(fs, args)
+	parsed, err := parseCommandArgs(args, map[string]flagType{"email": stringFlag, "name": stringFlag, "server": stringFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-	if *email == "" || *name == "" || *server == "" || len(fs.Args()) != 0 {
+	email := parsed.String("email", "")
+	name := parsed.String("name", "")
+	server := parsed.String("server", "")
+	if email == "" || name == "" || server == "" || len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive register --email <email> --name <name> --server <url>")
 		os.Exit(1)
 	}
 
-	client := NewClientWithServer(*server)
-	result, err := client.Post("/api/register", map[string]string{
-		"email": *email,
-		"name":  *name,
-	})
+	client := NewClientWithServer(server)
+	result, err := client.Post("/api/register", map[string]string{"email": email, "name": name})
 	if err != nil {
 		fatalf("Registration failed: %v", err)
 	}
 
 	apiKey, _ := result["api_key"].(string)
-	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: *server, Mount: "/drive"}); err != nil {
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: "/drive"}); err != nil {
 		fatalf("Failed to save credentials: %v", err)
 	}
 
@@ -38,50 +37,52 @@ func runRegister(args []string) {
 	fmt.Printf("  Saved to: %s\n", credentialsPath())
 	fmt.Println()
 	fmt.Println("Check your email for the verification code, then run:")
-	fmt.Printf("  pidrive verify --email %s --code <code>\n", *email)
+	fmt.Printf("  pidrive verify --email %s --code <code>\n", email)
 }
 
 func runLogin(args []string) {
-	fs := newFlagSet("login")
-	email := fs.String("email", "", "Email address")
-	server := fs.String("server", "", "pidrive server URL")
-	parseFlags(fs, args)
+	parsed, err := parseCommandArgs(args, map[string]flagType{"email": stringFlag, "server": stringFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-	if *email == "" || len(fs.Args()) != 0 {
+	email := parsed.String("email", "")
+	server := parsed.String("server", "")
+	if email == "" || len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive login --email <email> [--server <url>]")
 		os.Exit(1)
 	}
 
-	if *server == "" {
+	if server == "" {
 		creds, err := LoadCredentials()
 		if err == nil {
-			*server = creds.Server
+			server = creds.Server
 		}
 	}
-	if *server == "" {
+	if server == "" {
 		fmt.Println("--server is required (first time login)")
 		os.Exit(1)
 	}
 
-	client := NewClientWithServer(*server)
-	if _, err := client.Post("/api/login", map[string]string{"email": *email}); err != nil {
+	client := NewClientWithServer(server)
+	if _, err := client.Post("/api/login", map[string]string{"email": email}); err != nil {
 		fatalf("Login failed: %v", err)
 	}
 
-	fmt.Println("✓ Verification code sent to", *email)
+	fmt.Println("✓ Verification code sent to", email)
 	fmt.Println()
 	fmt.Print("Enter verification code: ")
 	reader := bufio.NewReader(os.Stdin)
 	code, _ := reader.ReadString('\n')
 	code = strings.TrimSpace(code)
 
-	result, err := client.Post("/api/verify", map[string]string{"email": *email, "code": code})
+	result, err := client.Post("/api/verify", map[string]string{"email": email, "code": code})
 	if err != nil {
 		fatalf("Verification failed: %v", err)
 	}
 
 	apiKey, _ := result["api_key"].(string)
-	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: *server, Mount: "/drive"}); err != nil {
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: "/drive"}); err != nil {
 		fatalf("Failed to save credentials: %v", err)
 	}
 
@@ -89,12 +90,14 @@ func runLogin(args []string) {
 }
 
 func runVerify(args []string) {
-	fs := newFlagSet("verify")
-	email := fs.String("email", "", "Email address")
-	code := fs.String("code", "", "Verification code")
-	parseFlags(fs, args)
+	parsed, err := parseCommandArgs(args, map[string]flagType{"email": stringFlag, "code": stringFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
 
-	if *email == "" || *code == "" || len(fs.Args()) != 0 {
+	email := parsed.String("email", "")
+	code := parsed.String("code", "")
+	if email == "" || code == "" || len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive verify --email <email> --code <code>")
 		os.Exit(1)
 	}
@@ -105,7 +108,7 @@ func runVerify(args []string) {
 	}
 
 	client := NewClientWithServer(creds.Server)
-	result, err := client.Post("/api/verify", map[string]string{"email": *email, "code": *code})
+	result, err := client.Post("/api/verify", map[string]string{"email": email, "code": code})
 	if err != nil {
 		fatalf("Verification failed: %v", err)
 	}
@@ -122,9 +125,11 @@ func runVerify(args []string) {
 }
 
 func runWhoami(args []string) {
-	fs := newFlagSet("whoami")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive whoami")
 		os.Exit(1)
 	}

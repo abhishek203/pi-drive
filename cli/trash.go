@@ -6,14 +6,15 @@ import (
 )
 
 func runTrash(args []string) {
-	fs := newFlagSet("trash")
-	empty := fs.Bool("empty", false, "Permanently delete all trash")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, map[string]flagType{"empty": boolFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive trash [--empty]")
 		os.Exit(1)
 	}
-	if *empty {
+	if parsed.Bool("empty") {
 		emptyTrash()
 		return
 	}
@@ -21,9 +22,11 @@ func runTrash(args []string) {
 }
 
 func runRestore(args []string) {
-	fs := newFlagSet("restore")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 1 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 1 {
 		fmt.Println("Usage: pidrive restore <path>")
 		os.Exit(1)
 	}
@@ -33,11 +36,11 @@ func runRestore(args []string) {
 		fatalf("%v", err)
 	}
 
-	if _, err := client.Post("/api/trash/restore", map[string]string{"path": fs.Args()[0]}); err != nil {
+	if _, err := client.Post("/api/trash/restore", map[string]string{"path": parsed.args[0]}); err != nil {
 		fatalf("%v", err)
 	}
 
-	fmt.Printf("✓ Restored %s\n", fs.Args()[0])
+	fmt.Printf("✓ Restored %s\n", parsed.args[0])
 }
 
 func listTrash() {
@@ -81,10 +84,8 @@ func emptyTrash() {
 	if err != nil {
 		fatalf("%v", err)
 	}
-
 	if _, err := client.Delete("/api/trash"); err != nil {
 		fatalf("%v", err)
 	}
-
 	fmt.Println("✓ Trash emptied")
 }

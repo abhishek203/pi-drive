@@ -6,9 +6,11 @@ import (
 )
 
 func runUsage(args []string) {
-	fs := newFlagSet("usage")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive usage")
 		os.Exit(1)
 	}
@@ -40,9 +42,11 @@ func runUsage(args []string) {
 }
 
 func runPlans(args []string) {
-	fs := newFlagSet("plans")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive plans")
 		os.Exit(1)
 	}
@@ -67,7 +71,6 @@ func runPlans(args []string) {
 		name, _ := plan["name"].(string)
 		storage := int64(plan["storage_bytes"].(float64))
 		price := int(plan["price_cents"].(float64))
-
 		priceStr := "free"
 		if price > 0 {
 			priceStr = fmt.Sprintf("$%d/mo", price/100)
@@ -79,10 +82,13 @@ func runPlans(args []string) {
 }
 
 func runUpgrade(args []string) {
-	fs := newFlagSet("upgrade")
-	plan := fs.String("plan", "", "Plan to upgrade to (free, pro, team)")
-	parseFlags(fs, args)
-	if *plan == "" || len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, map[string]flagType{"plan": stringFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
+
+	plan := parsed.String("plan", "")
+	if plan == "" || len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive upgrade --plan <id>")
 		fmt.Println("Run 'pidrive plans' to see available plans.")
 		os.Exit(1)
@@ -92,10 +98,9 @@ func runUpgrade(args []string) {
 	if err != nil {
 		fatalf("%v", err)
 	}
-
-	if _, err := client.Post("/api/upgrade", map[string]string{"plan": *plan}); err != nil {
+	if _, err := client.Post("/api/upgrade", map[string]string{"plan": plan}); err != nil {
 		fatalf("%v", err)
 	}
 
-	fmt.Printf("✓ Upgraded to %s\n", *plan)
+	fmt.Printf("✓ Upgraded to %s\n", plan)
 }

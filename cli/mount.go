@@ -6,9 +6,11 @@ import (
 )
 
 func runMount(args []string) {
-	fs := newFlagSet("mount")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive mount")
 		os.Exit(1)
 	}
@@ -46,9 +48,11 @@ func runMount(args []string) {
 }
 
 func runUnmount(args []string) {
-	fs := newFlagSet("unmount")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive unmount")
 		os.Exit(1)
 	}
@@ -69,9 +73,11 @@ func runUnmount(args []string) {
 }
 
 func runStatus(args []string) {
-	fs := newFlagSet("status")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, nil)
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive status")
 		os.Exit(1)
 	}

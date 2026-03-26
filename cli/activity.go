@@ -7,12 +7,11 @@ import (
 )
 
 func runActivity(args []string) {
-	fs := newFlagSet("activity")
-	since := fs.String("since", "", "Show activity since (e.g. 1h, 7d)")
-	actionType := fs.String("type", "", "Filter by action type (e.g. share, mount)")
-	limit := fs.Int("limit", 50, "Maximum number of events")
-	parseFlags(fs, args)
-	if len(fs.Args()) != 0 {
+	parsed, err := parseCommandArgs(args, map[string]flagType{"since": stringFlag, "type": stringFlag, "limit": intFlag})
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if len(parsed.args) != 0 {
 		fmt.Println("Usage: pidrive activity [--since dur] [--type action] [--limit n]")
 		os.Exit(1)
 	}
@@ -22,15 +21,20 @@ func runActivity(args []string) {
 		fatalf("%v", err)
 	}
 
+	limit, err := parsed.Int("limit", 50)
+	if err != nil {
+		fatalf("invalid --limit: %v", err)
+	}
+
 	params := url.Values{}
-	if *since != "" {
-		params.Set("since", *since)
+	if v := parsed.String("since", ""); v != "" {
+		params.Set("since", v)
 	}
-	if *actionType != "" {
-		params.Set("type", *actionType)
+	if v := parsed.String("type", ""); v != "" {
+		params.Set("type", v)
 	}
-	if *limit > 0 {
-		params.Set("limit", fmt.Sprintf("%d", *limit))
+	if limit > 0 {
+		params.Set("limit", fmt.Sprintf("%d", limit))
 	}
 
 	path := "/api/activity"

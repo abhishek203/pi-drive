@@ -9,6 +9,8 @@
 - [x] Added godoc comments to helpers.go and middleware.go
 - [x] Removed unreachable WebDAV, auth, billing, and mount code paths
 - [x] Replaced Cobra CLI framework with stdlib flag parsing for a smaller binary
+- [x] Split CLI mount/default-path logic by platform build tags for faster Darwin builds
+- [x] Replaced stdlib flag parsing with a tiny custom CLI arg parser for a smaller binary
 
 ## Future Optimization Opportunities
 

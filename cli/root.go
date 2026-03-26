@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"os"
 )
@@ -59,19 +58,6 @@ func Execute() {
 		printRootUsage()
 	default:
 		fatalf("unknown command: %s", cmd)
-	}
-}
-
-func newFlagSet(name string) *flag.FlagSet {
-	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	fs.SetOutput(os.Stderr)
-	fs.Usage = func() {}
-	return fs
-}
-
-func parseFlags(fs *flag.FlagSet, args []string) {
-	if err := fs.Parse(args); err != nil {
-		os.Exit(2)
 	}
 }
 
