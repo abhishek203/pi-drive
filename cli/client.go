@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 )
@@ -123,11 +122,7 @@ func (c *Client) MountPath() string {
 	if c.creds.Mount != "" {
 		return c.creds.Mount
 	}
-	if runtime.GOOS == "darwin" {
-		home, _ := os.UserHomeDir()
-		return filepath.Join(home, "drive")
-	}
-	return "/drive"
+	return defaultMountPath()
 }
 
 func (c *Client) doRequest(method, path string, body interface{}) (*http.Response, error) {

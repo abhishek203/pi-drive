@@ -3,9 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
-	"strings"
 )
 
 func runMount(args []string) {
@@ -34,71 +31,8 @@ func runMount(args []string) {
 	}
 
 	fmt.Printf("Mounting at %s...\n", drivePath)
-	if runtime.GOOS == "darwin" {
-		if _, err := exec.LookPath("expect"); err != nil {
-			fmt.Fprintln(os.Stderr, "✗ 'expect' is not installed")
-			fmt.Fprintln(os.Stderr, "  Install: brew install expect")
-			os.Exit(1)
-		}
-
-		serverWebDAV := client.Server() + "/webdav/"
-		expectScript := fmt.Sprintf(`spawn mount_webdav -i %s %s
-expect "Username:"
-send "pidrive\r"
-expect "Password:"
-send "%s\r"
-expect eof
-`, serverWebDAV, drivePath, client.creds.APIKey)
-
-		mountCmd := exec.Command("expect", "-c", expectScript)
-		mountCmd.Stderr = os.Stderr
-		mountCmd.Stdout = os.Stdout
-		if err := mountCmd.Run(); err != nil {
-			fatalf("Mount failed: %v", err)
-		}
-	} else if runtime.GOOS == "linux" {
-		if _, err := exec.LookPath("mount.davfs"); err != nil {
-			fmt.Fprintln(os.Stderr, "✗ davfs2 is not installed")
-			fmt.Fprintln(os.Stderr, "")
-			fmt.Fprintln(os.Stderr, "  Install:")
-			fmt.Fprintln(os.Stderr, "    sudo apt install davfs2")
-			fmt.Fprintln(os.Stderr, "")
-			fmt.Fprintln(os.Stderr, "  Then run 'pidrive mount' again.")
-			os.Exit(1)
-		}
-
-		home, _ := os.UserHomeDir()
-		davfsDir := home + "/.davfs2"
-		os.MkdirAll(davfsDir, 0700)
-		secretsFile := davfsDir + "/secrets"
-		serverWebDAV := client.Server() + "/webdav"
-
-		existing, _ := os.ReadFile(secretsFile)
-		lines := strings.Split(string(existing), "\n")
-		var newLines []string
-		found := false
-		for _, line := range lines {
-			if strings.HasPrefix(line, serverWebDAV) {
-				newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
-				found = true
-			} else {
-				newLines = append(newLines, line)
-			}
-		}
-		if !found {
-			newLines = append(newLines, fmt.Sprintf("%s pidrive %s", serverWebDAV, client.creds.APIKey))
-		}
-		os.WriteFile(secretsFile, []byte(strings.Join(newLines, "\n")), 0600)
-
-		mountExec := exec.Command("sudo", "mount", "-t", "davfs", serverWebDAV, drivePath)
-		mountExec.Stderr = os.Stderr
-		mountExec.Stdout = os.Stdout
-		mountExec.Stdin = os.Stdin
-		if err := mountExec.Run(); err != nil {
-			fatalf("Mount failed: %v", err)
-		}
-	} else {
-		fatalf("Unsupported OS")
+	if err := mountDrive(client, drivePath); err != nil {
+		fatalf("Mount failed: %v", err)
 	}
 
 	fmt.Println()
@@ -126,15 +60,8 @@ func runUnmount(args []string) {
 
 	drivePath := client.MountPath()
 	fmt.Printf("Unmounting %s...\n", drivePath)
-
-	var unmountErr error
-	if runtime.GOOS == "linux" {
-		unmountErr = exec.Command("sudo", "umount", drivePath).Run()
-	} else {
-		unmountErr = exec.Command("umount", drivePath).Run()
-	}
-	if unmountErr != nil {
-		fatalf("Unmount failed: %v", unmountErr)
+	if err := unmountDrive(drivePath); err != nil {
+		fatalf("Unmount failed: %v", err)
 	}
 
 	client.Post("/api/unmount", nil)
@@ -175,15 +102,4 @@ func runStatus(args []string) {
 	fmt.Printf("Agent:   %s\n", email)
 	fmt.Printf("Plan:    %s\n", plan)
 	fmt.Printf("Storage: %s / %s\n", formatBytes(int64(usedBytes)), formatBytes(int64(quotaBytes)))
-}
-
-func isMounted(path string) bool {
-	if runtime.GOOS == "linux" {
-		return exec.Command("mountpoint", "-q", path).Run() == nil
-	}
-	out, err := exec.Command("mount").Output()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(out), path)
 }
