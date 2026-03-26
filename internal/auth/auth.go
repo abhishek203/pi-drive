@@ -216,28 +216,3 @@ func (s *AuthService) GetAgentByEmail(email string) (*Agent, error) {
 	}
 	return agent, nil
 }
-
-// GetAgentByID looks up an agent by ID
-func (s *AuthService) GetAgentByID(id string) (*Agent, error) {
-	agent := &Agent{}
-	err := s.db.QueryRow(`
-		SELECT id, email, name, plan, quota_bytes, used_bytes, created_at, verified
-		FROM agents WHERE id = $1
-	`, id).Scan(
-		&agent.ID, &agent.Email, &agent.Name, &agent.Plan,
-		&agent.QuotaBytes, &agent.UsedBytes, &agent.CreatedAt, &agent.Verified,
-	)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("no agent found with id %s", id)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup agent: %w", err)
-	}
-	return agent, nil
-}
-
-// UpdateUsedBytes updates the storage usage for an agent
-func (s *AuthService) UpdateUsedBytes(agentID string, usedBytes int64) error {
-	_, err := s.db.Exec("UPDATE agents SET used_bytes = $1 WHERE id = $2", usedBytes, agentID)
-	return err
-}

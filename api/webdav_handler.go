@@ -16,13 +16,6 @@ var (
 	agentHandlersMu sync.Mutex
 )
 
-// InvalidateAgentHandler removes the cached handler so it gets recreated with fresh share data
-func InvalidateAgentHandler(agentID string) {
-	agentHandlersMu.Lock()
-	defer agentHandlersMu.Unlock()
-	delete(agentHandlers, agentID)
-}
-
 func (s *Server) getAgentWebDAVHandler(agentID string) *webdav.Handler {
 	agentHandlersMu.Lock()
 	defer agentHandlersMu.Unlock()

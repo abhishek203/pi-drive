@@ -18,3 +18,4 @@
 {"run":17,"commit":"690f423","metric":0,"metrics":{"binary_kb":6388,"build_ms":257,"deadcode":11,"loc":6379},"status":"keep","description":"Add CLI client tests for credentialsPath, MountPath, Server","timestamp":1773962873865,"segment":0,"confidence":null}
 {"run":18,"commit":"c6b94eb","metric":0,"metrics":{"binary_kb":6388,"build_ms":253,"deadcode":11,"loc":6412},"status":"keep","description":"Add formatBytes unit test for CLI byte formatting","timestamp":1773962923679,"segment":0,"confidence":null}
 {"type":"config","name":"PiDrive Dead Code Reduction","metricName":"deadcode","metricUnit":"","bestDirection":"lower"}
+{"run":19,"commit":"6b152cb","metric":11,"metrics":{},"status":"keep","description":"Baseline for deadcode-focused session: 11 unreachable funcs, issue_count 0, 6388KB binary, 682ms build","timestamp":1774503309870,"segment":1,"confidence":null}

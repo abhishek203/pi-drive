@@ -7,13 +7,12 @@
 - [x] Added `-ldflags="-s -w"` for 31% smaller binaries
 - [x] Added unit tests for auth, share, config, search, api packages
 - [x] Added godoc comments to helpers.go and middleware.go
+- [x] Removed unreachable WebDAV, auth, billing, and mount code paths
 
 ## Future Optimization Opportunities
 
 ### Dead Code Removal (Conservative)
-- Review if `InvalidateAgentHandler` in webdav_handler.go should be called somewhere
-- Review if billing service dead methods are intended for future Stripe integration
-- Review if mount service methods (FormatJuiceFS, MountMaster, etc.) are needed
+- Review remaining deadcode periodically as new features land
 
 ### Performance Improvements
 - Add database connection pooling configuration

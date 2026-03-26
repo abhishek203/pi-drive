@@ -4,19 +4,16 @@ import (
 	"net/http"
 
 	"github.com/pidrive/pidrive/internal/activity"
-	"github.com/pidrive/pidrive/internal/mount"
 	"github.com/pidrive/pidrive/internal/share"
 )
 
 type MountHandler struct {
-	mountService    *mount.MountService
 	fileManager     *share.FileManager
 	activityService *activity.ActivityService
 }
 
-func NewMountHandler(mountService *mount.MountService, fileManager *share.FileManager, activityService *activity.ActivityService) *MountHandler {
+func NewMountHandler(fileManager *share.FileManager, activityService *activity.ActivityService) *MountHandler {
 	return &MountHandler{
-		mountService:    mountService,
 		fileManager:     fileManager,
 		activityService: activityService,
 	}

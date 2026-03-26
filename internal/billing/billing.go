@@ -100,44 +100,6 @@ func (s *BillingService) TrackBandwidth(agentID string, bytesIn, bytesOut int64)
 	return err
 }
 
-// CheckQuota returns true if the agent is within quota
-func (s *BillingService) CheckQuota(agentID string, additionalBytes int64) (bool, error) {
-	var usedBytes, quotaBytes int64
-	err := s.db.QueryRow("SELECT used_bytes, quota_bytes FROM agents WHERE id = $1", agentID).
-		Scan(&usedBytes, &quotaBytes)
-	if err != nil {
-		return false, err
-	}
-	return usedBytes+additionalBytes <= quotaBytes, nil
-}
-
-// CheckBandwidthQuota returns true if the agent is within daily bandwidth quota
-func (s *BillingService) CheckBandwidthQuota(agentID string) (bool, error) {
-	var plan string
-	err := s.db.QueryRow("SELECT plan FROM agents WHERE id = $1", agentID).Scan(&plan)
-	if err != nil {
-		return false, err
-	}
-
-	var bandwidthLimit int64
-	err = s.db.QueryRow("SELECT bandwidth_bytes FROM plans WHERE id = $1", plan).Scan(&bandwidthLimit)
-	if err != nil {
-		return false, err
-	}
-
-	if bandwidthLimit < 0 {
-		return true, nil // unlimited
-	}
-
-	var todayUsage int64
-	s.db.QueryRow(`
-		SELECT COALESCE(bytes_in + bytes_out, 0) FROM bandwidth_usage
-		WHERE agent_id = $1 AND date = CURRENT_DATE
-	`, agentID).Scan(&todayUsage)
-
-	return todayUsage < bandwidthLimit, nil
-}
-
 // Upgrade changes an agent's plan and quota
 func (s *BillingService) Upgrade(agentID, planID string) error {
 	var storageBytes int64
@@ -174,26 +136,4 @@ func (s *BillingService) GetBillingInfo(agentID string) (*BillingInfo, error) {
 	}
 
 	return info, err
-}
-
-// EnsureBillingRecord creates a billing record if it doesn't exist
-func (s *BillingService) EnsureBillingRecord(agentID string) error {
-	_, err := s.db.Exec(`
-		INSERT INTO billing (agent_id) VALUES ($1) ON CONFLICT (agent_id) DO NOTHING
-	`, agentID)
-	return err
-}
-
-// UpdateStripeInfo updates Stripe details for an agent
-func (s *BillingService) UpdateStripeInfo(agentID, customerID, subscriptionID string, periodStart, periodEnd time.Time) error {
-	_, err := s.db.Exec(`
-		UPDATE billing SET
-			stripe_customer_id = $1,
-			stripe_subscription_id = $2,
-			current_period_start = $3,
-			current_period_end = $4,
-			status = 'active'
-		WHERE agent_id = $5
-	`, customerID, subscriptionID, periodStart, periodEnd, agentID)
-	return err
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/pidrive/pidrive/internal/billing"
 	"github.com/pidrive/pidrive/internal/config"
 	"github.com/pidrive/pidrive/internal/db"
-	"github.com/pidrive/pidrive/internal/mount"
 	"github.com/pidrive/pidrive/internal/search"
 	"github.com/pidrive/pidrive/internal/share"
 	"github.com/pidrive/pidrive/internal/trash"
@@ -27,7 +26,6 @@ type Server struct {
 	indexer         *search.Indexer
 	trashService    *trash.TrashService
 	billingService  *billing.BillingService
-	mountService    *mount.MountService
 }
 
 func NewServer(cfg *config.Config, database *db.DB) *Server {
@@ -40,7 +38,6 @@ func NewServer(cfg *config.Config, database *db.DB) *Server {
 	idx := search.NewIndexer(database, cfg.JuiceFSMountPath, 60*time.Second)
 	trashSvc := trash.NewTrashService(database, cfg.JuiceFSMountPath, cfg.JuiceFSTrashDays)
 	billingSvc := billing.NewBillingService(database)
-	mountSvc := mount.NewMountService(cfg)
 
 	return &Server{
 		cfg:             cfg,
@@ -54,7 +51,6 @@ func NewServer(cfg *config.Config, database *db.DB) *Server {
 		indexer:         idx,
 		trashService:    trashSvc,
 		billingService:  billingSvc,
-		mountService:    mountSvc,
 	}
 }
 
@@ -62,7 +58,7 @@ func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 
 	authHandler := NewAuthHandler(s.authService, s.emailService, s.shareService)
-	mountHandler := NewMountHandler(s.mountService, s.fileManager, s.activityService)
+	mountHandler := NewMountHandler(s.fileManager, s.activityService)
 	shareHandler := NewShareHandler(s.shareService, s.fileManager, s.authService, s.emailService, s.activityService, s.billingService)
 	searchHandler := NewSearchHandler(s.searchService, s.indexer)
 	activityHandler := NewActivityHandler(s.activityService)
