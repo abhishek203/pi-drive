@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -119,10 +120,18 @@ func (c *Client) Server() string {
 }
 
 func (c *Client) MountPath() string {
-	if c.creds.Mount != "" {
-		return c.creds.Mount
+	if c.creds.Mount == "" {
+		return defaultMountPath()
 	}
-	return defaultMountPath()
+
+	// Legacy macOS credentials were saved with /drive even though the documented
+	// and actual default mount location is ~/drive. Treat that persisted value as
+	// the Darwin default so mount/status/open use the correct local path.
+	if runtime.GOOS == "darwin" && c.creds.Mount == "/drive" {
+		return defaultMountPath()
+	}
+
+	return c.creds.Mount
 }
 
 func (c *Client) doRequest(method, path string, body interface{}) (*http.Response, error) {

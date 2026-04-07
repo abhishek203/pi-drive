@@ -28,7 +28,7 @@ func runRegister(args []string) {
 	}
 
 	apiKey, _ := result["api_key"].(string)
-	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: "/drive"}); err != nil {
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: defaultMountPath()}); err != nil {
 		fatalf("Failed to save credentials: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func runLogin(args []string) {
 	}
 
 	apiKey, _ := result["api_key"].(string)
-	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: "/drive"}); err != nil {
+	if err := SaveCredentials(&Credentials{APIKey: apiKey, Server: server, Mount: defaultMountPath()}); err != nil {
 		fatalf("Failed to save credentials: %v", err)
 	}
 

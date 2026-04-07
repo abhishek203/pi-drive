@@ -72,7 +72,13 @@ fi
 echo ""
 echo "pidrive installed!"
 echo ""
+if [ "$OS" = "darwin" ]; then
+  MOUNT_PATH="$HOME/drive/my/"
+else
+  MOUNT_PATH="/drive/my/"
+fi
+
 echo "Next steps:"
 echo "  pidrive register --email you@company.com --name \"My Agent\" --server https://pidrive.ressl.ai"
 echo "  pidrive mount"
-echo "  ls /drive/my/"
+echo "  ls ${MOUNT_PATH}"

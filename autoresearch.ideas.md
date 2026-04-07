@@ -19,6 +19,7 @@
 - Consider prepared statements for frequently executed queries
 - Add caching for frequently accessed data (plans, agent info)
 - Cache parsed templates in templates package
+- For further CLI shrinking, test removing the `fmt` dependency entirely with lightweight stdout/stderr formatting helpers; partial stdlib-package removals (e.g. `bytes`) did not move the binary
 
 ### Code Quality
 - Add more unit tests for:

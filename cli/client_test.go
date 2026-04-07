@@ -62,6 +62,11 @@ func TestClient_MountPath(t *testing.T) {
 			mount:    "",
 			expected: "", // will be set based on OS
 		},
+		{
+			name:     "legacy darwin /drive uses default mount",
+			mount:    "/drive",
+			expected: "/drive", // adjusted below for darwin
+		},
 	}
 
 	for _, tt := range tests {
@@ -73,7 +78,13 @@ func TestClient_MountPath(t *testing.T) {
 			got := c.MountPath()
 
 			if tt.mount != "" {
-				if got != tt.expected {
+				if runtime.GOOS == "darwin" && tt.mount == "/drive" {
+					home, _ := os.UserHomeDir()
+					expected := filepath.Join(home, "drive")
+					if got != expected {
+						t.Errorf("MountPath() = %q, want %q (darwin legacy)", got, expected)
+					}
+				} else if got != tt.expected {
 					t.Errorf("MountPath() = %q, want %q", got, tt.expected)
 				}
 			} else {

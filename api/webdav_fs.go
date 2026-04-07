@@ -255,10 +255,14 @@ func (d *virtualDir) Readdir(count int) ([]os.FileInfo, error) {
 	}
 	entries := d.entries[d.pos : d.pos+count]
 	d.pos += count
-	if d.pos >= len(d.entries) {
-		return entries, io.EOF
+
+	// Match os.File.Readdir behavior closely: if we successfully returned entries,
+	// do not also return io.EOF in the same call. Some WebDAV clients treat that
+	// as a hard directory listing failure and surface an I/O error.
+	if len(entries) > 0 {
+		return entries, nil
 	}
-	return entries, nil
+	return nil, io.EOF
 }
 
 func (d *virtualDir) Stat() (os.FileInfo, error) {
